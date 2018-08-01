@@ -14,7 +14,12 @@ sources = [
   'src/instance.cpp',
   'src/validation.cpp',
   'src/extensions.cpp',
+  'src/surface.cpp',
+  'src/window.cpp',
   'src/device.cpp',
+  'src/queue.cpp',
+  'src/sync.cpp',
+  'src/swapchain.cpp',
 ]
 
 executable(
