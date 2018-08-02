@@ -3,8 +3,8 @@
 
 using namespace app;
 
-uint32_t
-getSwapchainNumImages(const VkSurfaceCapabilitiesKHR &surfaceCapabilities) {
+uint32_t App::getSwapchainNumImages(
+    const VkSurfaceCapabilitiesKHR &surfaceCapabilities) {
   uint32_t imageCount = surfaceCapabilities.minImageCount + 1;
 
   if (surfaceCapabilities.minImageCount > 0 &&
@@ -16,7 +16,7 @@ getSwapchainNumImages(const VkSurfaceCapabilitiesKHR &surfaceCapabilities) {
 }
 
 VkSurfaceFormatKHR
-getSwapchainFormat(const std::vector<VkSurfaceFormatKHR> &formats) {
+App::getSwapchainFormat(const std::vector<VkSurfaceFormatKHR> &formats) {
   if (formats.size() == 1 && formats[0].format == VK_FORMAT_UNDEFINED) {
     return {VK_FORMAT_R8G8B8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR};
   }
@@ -31,9 +31,13 @@ getSwapchainFormat(const std::vector<VkSurfaceFormatKHR> &formats) {
 }
 
 VkExtent2D
-getSwapchainExtent(const VkSurfaceCapabilitiesKHR &surfaceCapabilities) {
+App::getSwapchainExtent(const VkSurfaceCapabilitiesKHR &surfaceCapabilities) {
   if (surfaceCapabilities.currentExtent.width == static_cast<uint32_t>(-1)) {
-    VkExtent2D swapchainExtent = {800, 600};
+    int width, height;
+    glfwGetWindowSize(this->window, &width, &height);
+
+    VkExtent2D swapchainExtent = {static_cast<uint32_t>(width),
+                                  static_cast<uint32_t>(height)};
     if (swapchainExtent.width < surfaceCapabilities.minImageExtent.width) {
       swapchainExtent.width = surfaceCapabilities.minImageExtent.width;
     }
@@ -56,8 +60,8 @@ getSwapchainExtent(const VkSurfaceCapabilitiesKHR &surfaceCapabilities) {
   return surfaceCapabilities.currentExtent;
 }
 
-VkImageUsageFlags
-getSwapchainUsageFlags(const VkSurfaceCapabilitiesKHR &surfaceCapabilities) {
+VkImageUsageFlags App::getSwapchainUsageFlags(
+    const VkSurfaceCapabilitiesKHR &surfaceCapabilities) {
   if (surfaceCapabilities.supportedUsageFlags &
       VK_IMAGE_USAGE_TRANSFER_DST_BIT) {
     return VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
@@ -104,8 +108,8 @@ getSwapchainUsageFlags(const VkSurfaceCapabilitiesKHR &surfaceCapabilities) {
   return static_cast<VkImageUsageFlags>(-1);
 }
 
-VkSurfaceTransformFlagBitsKHR
-getSwapchainTransform(const VkSurfaceCapabilitiesKHR &surfaceCapabilities) {
+VkSurfaceTransformFlagBitsKHR App::getSwapchainTransform(
+    const VkSurfaceCapabilitiesKHR &surfaceCapabilities) {
   if (surfaceCapabilities.supportedTransforms &
       VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) {
     return VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
@@ -114,8 +118,8 @@ getSwapchainTransform(const VkSurfaceCapabilitiesKHR &surfaceCapabilities) {
   }
 }
 
-VkPresentModeKHR
-getSwapchainPresentMode(const std::vector<VkPresentModeKHR> &presentModes) {
+VkPresentModeKHR App::getSwapchainPresentMode(
+    const std::vector<VkPresentModeKHR> &presentModes) {
   for (const auto &presentMode : presentModes) {
     if (presentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
       return presentMode;
@@ -135,6 +139,8 @@ getSwapchainPresentMode(const std::vector<VkPresentModeKHR> &presentModes) {
 }
 
 void App::createSwapchain() {
+  canRender = false;
+
   VkSurfaceCapabilitiesKHR surfaceCapabilities;
   if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
           this->physicalDevice, this->surface, &surfaceCapabilities) !=
@@ -215,4 +221,6 @@ void App::createSwapchain() {
   if (oldSwapchain != VK_NULL_HANDLE) {
     vkDestroySwapchainKHR(this->device, oldSwapchain, nullptr);
   }
+
+  canRender = true;
 }

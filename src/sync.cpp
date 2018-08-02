@@ -1,4 +1,5 @@
 #include "app.hpp"
+#include <iostream>
 
 using namespace app;
 
@@ -10,6 +11,11 @@ void App::createSemaphores() {
 
   if (vkCreateSemaphore(this->device, &semaphoreCreateInfo, nullptr,
                         &this->imageAvailableSemaphore) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create semaphores");
+  }
+
+  if (vkCreateSemaphore(this->device, &semaphoreCreateInfo, nullptr,
+                        &this->renderingFinishedSemaphore) != VK_SUCCESS) {
     throw std::runtime_error("Failed to create semaphores");
   }
 }

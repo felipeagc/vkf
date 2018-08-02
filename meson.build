@@ -20,6 +20,8 @@ sources = [
   'src/queue.cpp',
   'src/sync.cpp',
   'src/swapchain.cpp',
+  'src/drawing.cpp',
+  'src/commands.cpp',
 ]
 
 executable(
