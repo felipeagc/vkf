@@ -1,6 +1,6 @@
 #include "app.hpp"
-#include <thread>
 #include <chrono>
+#include <thread>
 
 using namespace app;
 
@@ -8,21 +8,29 @@ App::App() {
 }
 
 App::~App() {
-  this->destroyCommandPool();
-
   if (this->device != VK_NULL_HANDLE) {
     vkDeviceWaitIdle(this->device);
 
+    this->destroyResizables();
+
+    for (const auto &imageView : this->swapchainImageViews) {
+      if (imageView != VK_NULL_HANDLE) {
+        vkDestroyImageView(this->device, imageView, nullptr);
+      }
+    }
+    this->swapchainImageViews.clear();
+
+    if (this->swapchain != VK_NULL_HANDLE) {
+      vkDestroySwapchainKHR(this->device, this->swapchain, nullptr);
+    }
+
     if (this->renderingFinishedSemaphore != VK_NULL_HANDLE) {
-      vkDestroySemaphore(this->device, this->renderingFinishedSemaphore, nullptr);
+      vkDestroySemaphore(this->device, this->renderingFinishedSemaphore,
+                         nullptr);
     }
 
     if (this->imageAvailableSemaphore != VK_NULL_HANDLE) {
       vkDestroySemaphore(this->device, this->imageAvailableSemaphore, nullptr);
-    }
-
-    if (this->swapchain != VK_NULL_HANDLE) {
-      vkDestroySwapchainKHR(this->device, this->swapchain, nullptr);
     }
 
     vkDestroyDevice(this->device, nullptr);
@@ -76,5 +84,46 @@ void App::init() {
   this->getDeviceQueues();
   this->createSemaphores();
   this->createSwapchain();
+  this->createSwapchainImageViews();
+  this->createRenderPass();
+  this->createFramebuffers();
+  this->createPipeline();
   this->createCommandBuffers();
+  this->recordCommandBuffers();
+}
+
+void App::destroyResizables() {
+  if (this->device != VK_NULL_HANDLE) {
+    vkDeviceWaitIdle(this->device);
+
+    if ((this->graphicsCommandBuffers.size() > 0) &&
+        (this->graphicsCommandBuffers[0] != VK_NULL_HANDLE)) {
+      vkFreeCommandBuffers(this->device, this->graphicsCommandPool,
+                           static_cast<uint32_t>(graphicsCommandBuffers.size()),
+                           this->graphicsCommandBuffers.data());
+      this->graphicsCommandBuffers.clear();
+    }
+
+    if (this->graphicsCommandPool != VK_NULL_HANDLE) {
+      vkDestroyCommandPool(this->device, this->graphicsCommandPool, nullptr);
+      this->graphicsCommandPool = VK_NULL_HANDLE;
+    }
+
+    if (this->graphicsPipeline != VK_NULL_HANDLE) {
+      vkDestroyPipeline(this->device, this->graphicsPipeline, nullptr);
+      this->graphicsPipeline = VK_NULL_HANDLE;
+    }
+
+    if (this->renderPass != VK_NULL_HANDLE) {
+      vkDestroyRenderPass(this->device, this->renderPass, nullptr);
+      this->renderPass = VK_NULL_HANDLE;
+    }
+
+    for (const auto &framebuffer : this->framebuffers) {
+      if (framebuffer != VK_NULL_HANDLE) {
+        vkDestroyFramebuffer(this->device, framebuffer, nullptr);
+      }
+    }
+    this->framebuffers.clear();
+  }
 }

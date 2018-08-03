@@ -8,11 +8,16 @@ void App::onResize() {
     vkDeviceWaitIdle(this->device);
   }
 
-  this->destroyCommandPool();
+  this->destroyResizables();
 
+  // Recreate stuff
   this->createSwapchain();
-
+  this->createSwapchainImageViews();
+  this->createRenderPass();
+  this->createFramebuffers();
+  this->createPipeline();
   this->createCommandBuffers();
+  this->recordCommandBuffers();
 }
 
 void App::draw() {
@@ -42,11 +47,11 @@ void App::draw() {
   submitInfo.pWaitSemaphores = &this->imageAvailableSemaphore;
   submitInfo.pWaitDstStageMask = &waitDstStageMask; // ?
   submitInfo.commandBufferCount = 1;
-  submitInfo.pCommandBuffers = &this->presentQueueCmdBuffers[imageIndex];
+  submitInfo.pCommandBuffers = &this->graphicsCommandBuffers[imageIndex];
   submitInfo.signalSemaphoreCount = 1;
   submitInfo.pSignalSemaphores = &this->renderingFinishedSemaphore;
 
-  if (vkQueueSubmit(this->presentQueue, 1, &submitInfo, VK_NULL_HANDLE) !=
+  if (vkQueueSubmit(this->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) !=
       VK_SUCCESS) {
     throw std::runtime_error(
         "Failed to submit to the command buffer to presentation queue");

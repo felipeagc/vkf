@@ -22,6 +22,10 @@ sources = [
   'src/swapchain.cpp',
   'src/drawing.cpp',
   'src/commands.cpp',
+  'src/renderpass.cpp',
+  'src/framebuffer.cpp',
+  'src/shader.cpp',
+  'src/pipeline.cpp',
 ]
 
 executable(

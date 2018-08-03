@@ -40,10 +40,20 @@ private:
   VkSemaphore renderingFinishedSemaphore = VK_NULL_HANDLE;
 
   VkSurfaceKHR surface = VK_NULL_HANDLE;
-  VkSwapchainKHR swapchain = VK_NULL_HANDLE;
 
-  VkCommandPool presentQueueCmdPool = VK_NULL_HANDLE;
-  std::vector<VkCommandBuffer> presentQueueCmdBuffers;
+  VkSwapchainKHR swapchain = VK_NULL_HANDLE;
+  VkFormat swapchainImageFormat;
+  VkExtent2D swapchainExtent;
+  std::vector<VkImage> swapchainImages;
+  std::vector<VkImageView> swapchainImageViews;
+
+  VkRenderPass renderPass;
+  std::vector<VkFramebuffer> framebuffers;
+
+  VkPipeline graphicsPipeline;
+
+  VkCommandPool graphicsCommandPool = VK_NULL_HANDLE;
+  std::vector<VkCommandBuffer> graphicsCommandBuffers;
 
   bool canRender = false;
 
@@ -69,21 +79,36 @@ private:
   VkPresentModeKHR
   getSwapchainPresentMode(const std::vector<VkPresentModeKHR> &presentModes);
 
+  VkShaderModule createShaderModule(const char *filename); // shader.cpp
+
+  VkPipelineLayout createPipelineLayout(); // pipeline.cpp
+
+  void createCommandPool(uint32_t queueFamilyIndex, VkCommandPool *pool);
+
+  void allocateCommandBuffers(VkCommandPool pool,
+                              uint32_t count,
+                              VkCommandBuffer *commandBuffers);
+
   // Setup functions
-  void createWindow();         // window.cpp
-  void createInstance();       // instance.cpp
-  void setupDebugCallback();   // validation.cpp
-  void createSurface();        // surface.cpp
-  void createDevice();         // device.cpp
-  void getDeviceQueues();      // queue.cpp
-  void createSemaphores();     // sync.cpp
-  void createSwapchain();      // swapchain.cpp
-  void createCommandBuffers(); // commands.cpp
-  void recordCommandBuffers(); // commands.cpp
+  void createWindow();       // window.cpp
+  void createInstance();     // instance.cpp
+  void setupDebugCallback(); // validation.cpp
+  void createSurface();      // surface.cpp
+  void createDevice();       // device.cpp
+  void getDeviceQueues();    // queue.cpp
 
-  void draw();     // drawing.cpp
-  void onResize(); // drawing.cpp
+  void createSemaphores();          // sync.cpp
+  void createSwapchain();           // swapchain.cpp
+  void createSwapchainImageViews(); // swapchain.cpp
+  void createCommandBuffers();      // commands.cpp
+  void recordCommandBuffers();      // commands.cpp
 
-  void destroyCommandPool(); // commands.cpp
+  void createRenderPass();   // renderpass.cpp
+  void createFramebuffers(); // framebuffer.cpp
+  void createPipeline();     // pipeline.cpp
+
+  void draw();              // drawing.cpp
+  void onResize();          // drawing.cpp
+  void destroyResizables(); // app.cpp
 };
 } // namespace app

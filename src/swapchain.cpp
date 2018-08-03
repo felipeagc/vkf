@@ -141,6 +141,13 @@ VkPresentModeKHR App::getSwapchainPresentMode(
 void App::createSwapchain() {
   canRender = false;
 
+  for (const auto &imageView : this->swapchainImageViews) {
+    if (imageView != VK_NULL_HANDLE) {
+      vkDestroyImageView(this->device, imageView, nullptr);
+    }
+  }
+  this->swapchainImageViews.clear();
+
   VkSurfaceCapabilitiesKHR surfaceCapabilities;
   if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
           this->physicalDevice, this->surface, &surfaceCapabilities) !=
@@ -222,5 +229,46 @@ void App::createSwapchain() {
     vkDestroySwapchainKHR(this->device, oldSwapchain, nullptr);
   }
 
+  this->swapchainImageFormat = desiredFormat.format;
+  this->swapchainExtent = desiredExtent;
+
+  uint32_t imageCount;
+  vkGetSwapchainImagesKHR(device, this->swapchain, &imageCount, nullptr);
+  this->swapchainImages.resize(imageCount);
+  vkGetSwapchainImagesKHR(device, this->swapchain, &imageCount,
+                          this->swapchainImages.data());
+
   canRender = true;
+}
+
+void App::createSwapchainImageViews() {
+  this->swapchainImageViews.resize(this->swapchainImages.size());
+
+  for (size_t i = 0; i < swapchainImages.size(); i++) {
+    VkImageViewCreateInfo createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    createInfo.pNext = nullptr;
+    createInfo.flags = 0;
+    createInfo.image = this->swapchainImages[i];
+    createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    createInfo.format = this->swapchainImageFormat;
+    createInfo.components = {
+        VK_COMPONENT_SWIZZLE_IDENTITY, // r
+        VK_COMPONENT_SWIZZLE_IDENTITY, // g
+        VK_COMPONENT_SWIZZLE_IDENTITY, // b
+        VK_COMPONENT_SWIZZLE_IDENTITY, // a
+    };
+    createInfo.subresourceRange = {
+        .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+        .baseMipLevel = 0,
+        .levelCount = 1,
+        .baseArrayLayer = 0,
+        .layerCount = 1,
+    };
+
+    if (vkCreateImageView(this->device, &createInfo, nullptr,
+                          &this->swapchainImageViews[i]) != VK_SUCCESS) {
+      throw std::runtime_error("Failed to create image views for framebuffer");
+    }
+  }
 }
