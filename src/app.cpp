@@ -24,14 +24,24 @@ App::~App() {
       vkDestroySwapchainKHR(this->device, this->swapchain, nullptr);
     }
 
-    if (this->renderingFinishedSemaphore != VK_NULL_HANDLE) {
-      vkDestroySemaphore(this->device, this->renderingFinishedSemaphore,
-                         nullptr);
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+      if (this->inFlightFences[i] != VK_NULL_HANDLE) {
+        vkDestroyFence(this->device, this->inFlightFences[i], nullptr);
+      }
+
+      if (this->renderingFinishedSemaphores[i] != VK_NULL_HANDLE) {
+        vkDestroySemaphore(this->device, this->renderingFinishedSemaphores[i],
+                           nullptr);
+      }
+
+      if (this->imageAvailableSemaphores[i] != VK_NULL_HANDLE) {
+        vkDestroySemaphore(this->device, this->imageAvailableSemaphores[i],
+                           nullptr);
+      }
     }
 
-    if (this->imageAvailableSemaphore != VK_NULL_HANDLE) {
-      vkDestroySemaphore(this->device, this->imageAvailableSemaphore, nullptr);
-    }
+    this->renderingFinishedSemaphores.clear();
+    this->imageAvailableSemaphores.clear();
 
     vkDestroyDevice(this->device, nullptr);
   }
@@ -82,7 +92,7 @@ void App::init() {
   this->createSurface();
   this->createDevice();
   this->getDeviceQueues();
-  this->createSemaphores();
+  this->createSyncObjects();
   this->createSwapchain();
   this->createSwapchainImageViews();
   this->createRenderPass();

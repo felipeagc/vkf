@@ -18,6 +18,8 @@ const std::vector<const char *> REQUIRED_VALIDATION_LAYERS = {
 const std::vector<const char *> REQUIRED_DEVICE_EXTENSIONS = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
+const int MAX_FRAMES_IN_FLIGHT = 2;
+
 class App {
 public:
   App();
@@ -32,12 +34,16 @@ private:
   VkDebugReportCallbackEXT callback = VK_NULL_HANDLE;
   VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
   VkDevice device = VK_NULL_HANDLE;
+
   uint32_t graphicsQueueFamilyIndex;
   uint32_t presentQueueFamilyIndex;
   VkQueue graphicsQueue = VK_NULL_HANDLE;
   VkQueue presentQueue = VK_NULL_HANDLE;
-  VkSemaphore imageAvailableSemaphore = VK_NULL_HANDLE;
-  VkSemaphore renderingFinishedSemaphore = VK_NULL_HANDLE;
+
+  std::vector<VkSemaphore> imageAvailableSemaphores;
+  std::vector<VkSemaphore> renderingFinishedSemaphores;
+  std::vector<VkFence> inFlightFences;
+  int currentFrame = 0;
 
   VkSurfaceKHR surface = VK_NULL_HANDLE;
 
@@ -97,7 +103,7 @@ private:
   void createDevice();       // device.cpp
   void getDeviceQueues();    // queue.cpp
 
-  void createSemaphores();          // sync.cpp
+  void createSyncObjects();         // sync.cpp
   void createSwapchain();           // swapchain.cpp
   void createSwapchainImageViews(); // swapchain.cpp
   void createCommandBuffers();      // commands.cpp

@@ -3,19 +3,30 @@
 
 using namespace app;
 
-void App::createSemaphores() {
+void App::createSyncObjects() {
   VkSemaphoreCreateInfo semaphoreCreateInfo = {};
   semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
   semaphoreCreateInfo.pNext = nullptr;
   semaphoreCreateInfo.flags = 0;
 
-  if (vkCreateSemaphore(this->device, &semaphoreCreateInfo, nullptr,
-                        &this->imageAvailableSemaphore) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create semaphores");
-  }
+  VkFenceCreateInfo fenceCreateInfo = {};
+  fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+  fenceCreateInfo.pNext = nullptr;
+  fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-  if (vkCreateSemaphore(this->device, &semaphoreCreateInfo, nullptr,
-                        &this->renderingFinishedSemaphore) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create semaphores");
+  imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+  renderingFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+  inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+
+  for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+    if ((vkCreateSemaphore(this->device, &semaphoreCreateInfo, nullptr,
+                           &this->imageAvailableSemaphores[i]) != VK_SUCCESS) ||
+        (vkCreateSemaphore(this->device, &semaphoreCreateInfo, nullptr,
+                           &this->renderingFinishedSemaphores[i]) !=
+         VK_SUCCESS) ||
+        (vkCreateFence(this->device, &fenceCreateInfo, nullptr,
+                       &inFlightFences[i]))) {
+      throw std::runtime_error("Failed to create semaphores");
+    }
   }
 }

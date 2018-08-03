@@ -21,10 +21,15 @@ void App::onResize() {
 }
 
 void App::draw() {
+  vkWaitForFences(this->device, 1, &this->inFlightFences[currentFrame], VK_TRUE,
+                  UINT64_MAX);
+  vkResetFences(this->device, 1, &this->inFlightFences[currentFrame]);
+
   uint32_t imageIndex;
-  VkResult result = vkAcquireNextImageKHR(
-      this->device, this->swapchain, UINT64_MAX, this->imageAvailableSemaphore,
-      VK_NULL_HANDLE, &imageIndex);
+  VkResult result =
+      vkAcquireNextImageKHR(this->device, this->swapchain, UINT64_MAX,
+                            this->imageAvailableSemaphores[this->currentFrame],
+                            VK_NULL_HANDLE, &imageIndex);
 
   switch (result) {
   case VK_SUCCESS:
@@ -44,15 +49,16 @@ void App::draw() {
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
   submitInfo.pNext = nullptr;
   submitInfo.waitSemaphoreCount = 1;
-  submitInfo.pWaitSemaphores = &this->imageAvailableSemaphore;
+  submitInfo.pWaitSemaphores = &this->imageAvailableSemaphores[currentFrame];
   submitInfo.pWaitDstStageMask = &waitDstStageMask; // ?
   submitInfo.commandBufferCount = 1;
   submitInfo.pCommandBuffers = &this->graphicsCommandBuffers[imageIndex];
   submitInfo.signalSemaphoreCount = 1;
-  submitInfo.pSignalSemaphores = &this->renderingFinishedSemaphore;
+  submitInfo.pSignalSemaphores =
+      &this->renderingFinishedSemaphores[currentFrame];
 
-  if (vkQueueSubmit(this->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) !=
-      VK_SUCCESS) {
+  if (vkQueueSubmit(this->graphicsQueue, 1, &submitInfo,
+                    this->inFlightFences[currentFrame]) != VK_SUCCESS) {
     throw std::runtime_error(
         "Failed to submit to the command buffer to presentation queue");
   }
@@ -61,7 +67,8 @@ void App::draw() {
   presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
   presentInfo.pNext = nullptr;
   presentInfo.waitSemaphoreCount = 1;
-  presentInfo.pWaitSemaphores = &this->renderingFinishedSemaphore;
+  presentInfo.pWaitSemaphores =
+      &this->renderingFinishedSemaphores[currentFrame];
   presentInfo.swapchainCount = 1;
   presentInfo.pSwapchains = &this->swapchain;
   presentInfo.pImageIndices = &imageIndex;
@@ -80,7 +87,5 @@ void App::draw() {
     throw std::runtime_error("Failed to queue image presentation");
   }
 
-  // TODO: temporary
-  // Switch this for a "frames-in-flight" approach with VkFences
-  vkQueueWaitIdle(this->presentQueue);
+  currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
