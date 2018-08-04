@@ -1,5 +1,7 @@
 project('vkf', 'cpp')
 
+subdir('shaders')
+
 dependencies = [
   dependency('glfw3'),
   dependency('vulkan'),

@@ -31,24 +31,24 @@ public:
 private:
   GLFWwindow *window;
 
-  VkInstance instance = VK_NULL_HANDLE;
-  VkDebugReportCallbackEXT callback = VK_NULL_HANDLE;
-  VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-  VkDevice device = VK_NULL_HANDLE;
+  VkInstance instance{VK_NULL_HANDLE};
+  VkDebugReportCallbackEXT callback{VK_NULL_HANDLE};
+  VkPhysicalDevice physicalDevice{VK_NULL_HANDLE};
+  VkDevice device{VK_NULL_HANDLE};
 
   uint32_t graphicsQueueFamilyIndex;
   uint32_t presentQueueFamilyIndex;
-  VkQueue graphicsQueue = VK_NULL_HANDLE;
-  VkQueue presentQueue = VK_NULL_HANDLE;
+  VkQueue graphicsQueue{VK_NULL_HANDLE};
+  VkQueue presentQueue{VK_NULL_HANDLE};
 
   std::vector<VkSemaphore> imageAvailableSemaphores{MAX_FRAMES_IN_FLIGHT};
   std::vector<VkSemaphore> renderingFinishedSemaphores{MAX_FRAMES_IN_FLIGHT};
   std::vector<VkFence> inFlightFences{MAX_FRAMES_IN_FLIGHT};
   int currentFrame = 0;
 
-  VkSurfaceKHR surface = VK_NULL_HANDLE;
+  VkSurfaceKHR surface{VK_NULL_HANDLE};
 
-  VkSwapchainKHR swapchain = VK_NULL_HANDLE;
+  VkSwapchainKHR swapchain = {VK_NULL_HANDLE};
   VkFormat swapchainImageFormat;
   VkExtent2D swapchainExtent;
   std::vector<VkImage> swapchainImages;
@@ -57,13 +57,13 @@ private:
   VkRenderPass renderPass;
   std::vector<VkFramebuffer> framebuffers{MAX_FRAMES_IN_FLIGHT};
 
-  VkPipeline graphicsPipeline;
+  VkPipeline graphicsPipeline{VK_NULL_HANDLE};
 
-  VkCommandPool graphicsCommandPool = VK_NULL_HANDLE;
+  VkCommandPool graphicsCommandPool{VK_NULL_HANDLE};
   std::vector<VkCommandBuffer> graphicsCommandBuffers{MAX_FRAMES_IN_FLIGHT};
 
-  VkBuffer vertexBuffer = VK_NULL_HANDLE;
-  VkDeviceMemory memory = VK_NULL_HANDLE;
+  VkBuffer vertexBuffer{VK_NULL_HANDLE};
+  VkDeviceMemory memory{VK_NULL_HANDLE};
 
   bool canRender = false;
 

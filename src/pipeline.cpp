@@ -24,8 +24,8 @@ VkPipelineLayout App::createPipelineLayout() {
 }
 
 void App::createPipeline() {
-  auto vertexShaderModule = this->createShaderModule("../shaders/vert.spv");
-  auto fragmentShaderModule = this->createShaderModule("../shaders/frag.spv");
+  auto vertexShaderModule = this->createShaderModule("shaders/shader.vert.spv");
+  auto fragmentShaderModule = this->createShaderModule("shaders/shader.frag.spv");
 
   std::vector<VkPipelineShaderStageCreateInfo> shaderStageCreateInfos = {
       {.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
