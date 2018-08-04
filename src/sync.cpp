@@ -14,10 +14,6 @@ void App::createSyncObjects() {
   fenceCreateInfo.pNext = nullptr;
   fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-  imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-  renderingFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-  inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
-
   for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
     if ((vkCreateSemaphore(this->device, &semaphoreCreateInfo, nullptr,
                            &this->imageAvailableSemaphores[i]) != VK_SUCCESS) ||

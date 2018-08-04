@@ -2,26 +2,25 @@
 
 using namespace app;
 
-void App::createFramebuffers() {
-  this->framebuffers.resize(this->swapchainImageViews.size());
+void App::regenFramebuffer(VkFramebuffer &framebuffer, VkImageView imageView) {
+  if (framebuffer != VK_NULL_HANDLE) {
+    vkDestroyFramebuffer(this->device, framebuffer, nullptr);
+    framebuffer = VK_NULL_HANDLE;
+  }
 
-  for (size_t i = 0; i < this->swapchainImageViews.size(); i++) {
-    VkFramebufferCreateInfo createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    createInfo.pNext = nullptr;
-    createInfo.flags = 0;
-    createInfo.renderPass = this->renderPass;
-    createInfo.attachmentCount = 1;
-    createInfo.pAttachments = &this->swapchainImageViews[i];
-    createInfo.width = 300;  // TODO: change this
-    createInfo.height = 300; // TODO: change this
-    createInfo.layers = 1;
+  VkFramebufferCreateInfo createInfo = {};
+  createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+  createInfo.pNext = nullptr;
+  createInfo.flags = 0;
+  createInfo.renderPass = this->renderPass;
+  createInfo.attachmentCount = 1;
+  createInfo.pAttachments = &imageView;
+  createInfo.width = this->swapchainExtent.width;
+  createInfo.height = this->swapchainExtent.height;
+  createInfo.layers = 1;
 
-    if (vkCreateFramebuffer(this->device,
-                            &createInfo,
-                            nullptr,
-                            &this->framebuffers[i]) != VK_SUCCESS) {
-      throw std::runtime_error("Failed to create framebuffer");
-    }
+  if (vkCreateFramebuffer(this->device, &createInfo, nullptr, &framebuffer) !=
+      VK_SUCCESS) {
+    throw std::runtime_error("Failed to create framebuffer");
   }
 }

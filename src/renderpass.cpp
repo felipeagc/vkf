@@ -30,16 +30,37 @@ void App::createRenderPass() {
       .pPreserveAttachments = nullptr,
   }};
 
-  VkRenderPassCreateInfo renderPassCreateInfo = {};
-  renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-  renderPassCreateInfo.pNext = nullptr;
-  renderPassCreateInfo.flags = 0;
-  renderPassCreateInfo.attachmentCount = 1;
-  renderPassCreateInfo.pAttachments = attachmentDescriptions;
-  renderPassCreateInfo.subpassCount = 1;
-  renderPassCreateInfo.pSubpasses = subpassDescriptions;
-  renderPassCreateInfo.dependencyCount = 0;
-  renderPassCreateInfo.pDependencies = nullptr;
+  std::vector<VkSubpassDependency> dependencies = {
+      {
+          .srcSubpass = VK_SUBPASS_EXTERNAL,
+          .dstSubpass = 0,
+          .srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+          .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+          .srcAccessMask = VK_ACCESS_MEMORY_READ_BIT,
+          .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+          .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
+      },
+      {
+          .srcSubpass = 0,
+          .dstSubpass = VK_SUBPASS_EXTERNAL,
+          .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+          .dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+          .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+          .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
+          .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
+      }};
+
+  VkRenderPassCreateInfo renderPassCreateInfo = {
+      .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = 0,
+      .attachmentCount = 1,
+      .pAttachments = attachmentDescriptions,
+      .subpassCount = 1,
+      .pSubpasses = subpassDescriptions,
+      .dependencyCount = static_cast<uint32_t>(dependencies.size()),
+      .pDependencies = dependencies.data(),
+  };
 
   if (vkCreateRenderPass(this->device, &renderPassCreateInfo, nullptr,
                          &this->renderPass) != VK_SUCCESS) {

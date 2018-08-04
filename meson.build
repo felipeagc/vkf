@@ -26,6 +26,7 @@ sources = [
   'src/framebuffer.cpp',
   'src/shader.cpp',
   'src/pipeline.cpp',
+  'src/vertex_buffer.cpp',
 ]
 
 executable(

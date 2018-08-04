@@ -14,15 +14,125 @@ void App::onResize() {
   this->createSwapchain();
   this->createSwapchainImageViews();
   this->createRenderPass();
-  this->createFramebuffers();
   this->createPipeline();
   this->createCommandBuffers();
-  this->recordCommandBuffers();
+}
+
+void App::prepareFrame(int currentFrame, uint32_t imageIndex) {
+  this->regenFramebuffer(this->framebuffers[currentFrame],
+                         this->swapchainImageViews[imageIndex]);
+
+  VkCommandBufferBeginInfo beginInfo = {};
+  beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+  beginInfo.pNext = nullptr;
+  beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+  beginInfo.pInheritanceInfo = nullptr;
+
+  vkBeginCommandBuffer(this->graphicsCommandBuffers[currentFrame], &beginInfo);
+
+  VkImageSubresourceRange imageSubresourceRange = {
+      .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+      .baseMipLevel = 0,
+      .levelCount = 1,
+      .baseArrayLayer = 0,
+      .layerCount = 1,
+  };
+
+  if (this->presentQueue != this->graphicsQueue) {
+    VkImageMemoryBarrier barrierFromPresentToDraw = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        .pNext = nullptr,
+        .srcAccessMask = VK_ACCESS_MEMORY_READ_BIT,
+        .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
+        .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+        .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+        .srcQueueFamilyIndex = presentQueueFamilyIndex,
+        .dstQueueFamilyIndex = graphicsQueueFamilyIndex,
+        .image = swapchainImages[imageIndex],
+        .subresourceRange = imageSubresourceRange,
+    };
+
+    vkCmdPipelineBarrier(this->graphicsCommandBuffers[currentFrame],
+                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0,
+                         nullptr, 0, nullptr, 1, &barrierFromPresentToDraw);
+  }
+
+  VkClearValue clearColor{{{1.0f, 0.8f, 0.4f, 0.0f}}};
+
+  VkRenderPassBeginInfo renderPassBeginInfo = {
+      .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+      .pNext = nullptr,
+      .renderPass = this->renderPass,
+      .framebuffer = this->framebuffers[currentFrame],
+      .renderArea = {{.x = 0, .y = 0}, this->swapchainExtent},
+      .clearValueCount = 1,
+      .pClearValues = &clearColor};
+
+  vkCmdBeginRenderPass(this->graphicsCommandBuffers[currentFrame],
+                       &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+  vkCmdBindPipeline(this->graphicsCommandBuffers[currentFrame],
+                    VK_PIPELINE_BIND_POINT_GRAPHICS, this->graphicsPipeline);
+
+  VkViewport viewport = {
+      .x = 0.0f,
+      .y = 0.0f,
+      .width = static_cast<float>(this->swapchainExtent.width),
+      .height = static_cast<float>(this->swapchainExtent.height),
+      .minDepth = 0.0f,
+      .maxDepth = 1.0f,
+  };
+
+  VkRect2D scissor = {{
+                          .x = 0,
+                          .y = 0,
+                      },
+                      this->swapchainExtent};
+
+  vkCmdSetViewport(this->graphicsCommandBuffers[currentFrame], 0, 1, &viewport);
+  vkCmdSetScissor(this->graphicsCommandBuffers[currentFrame], 0, 1, &scissor);
+
+  VkDeviceSize offset = 0;
+  vkCmdBindVertexBuffers(this->graphicsCommandBuffers[currentFrame], 0, 1,
+                         &this->vertexBuffer, &offset);
+
+  vkCmdDraw(this->graphicsCommandBuffers[currentFrame], 3, 1, 0, 0);
+
+  vkCmdEndRenderPass(this->graphicsCommandBuffers[currentFrame]);
+
+  if (this->presentQueue != this->graphicsQueue) {
+    VkImageMemoryBarrier barrierFromDrawToPresent = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        .pNext = nullptr,
+        .srcAccessMask = VK_ACCESS_MEMORY_READ_BIT,
+        .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
+        .oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+        .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+        .srcQueueFamilyIndex = graphicsQueueFamilyIndex,
+        .dstQueueFamilyIndex = presentQueueFamilyIndex,
+        .image = swapchainImages[imageIndex],
+        .subresourceRange = imageSubresourceRange,
+    };
+
+    vkCmdPipelineBarrier(this->graphicsCommandBuffers[currentFrame],
+                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0,
+                         nullptr, 1, &barrierFromDrawToPresent);
+  }
+
+  if (vkEndCommandBuffer(this->graphicsCommandBuffers[currentFrame]) !=
+      VK_SUCCESS) {
+    throw std::runtime_error("Failed to record command buffers");
+  }
 }
 
 void App::draw() {
-  vkWaitForFences(this->device, 1, &this->inFlightFences[currentFrame], VK_TRUE,
-                  UINT64_MAX);
+  if (vkWaitForFences(this->device, 1, &this->inFlightFences[currentFrame],
+                      VK_TRUE, UINT64_MAX) != VK_SUCCESS) {
+    throw std::runtime_error("Waiting for fence took too long");
+  }
+
   vkResetFences(this->device, 1, &this->inFlightFences[currentFrame]);
 
   uint32_t imageIndex;
@@ -43,6 +153,8 @@ void App::draw() {
         "Problem occurred during swap chain image acquisition");
   }
 
+  this->prepareFrame(currentFrame, imageIndex);
+
   VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
 
   VkSubmitInfo submitInfo = {};
@@ -50,9 +162,9 @@ void App::draw() {
   submitInfo.pNext = nullptr;
   submitInfo.waitSemaphoreCount = 1;
   submitInfo.pWaitSemaphores = &this->imageAvailableSemaphores[currentFrame];
-  submitInfo.pWaitDstStageMask = &waitDstStageMask; // ?
+  submitInfo.pWaitDstStageMask = &waitDstStageMask;
   submitInfo.commandBufferCount = 1;
-  submitInfo.pCommandBuffers = &this->graphicsCommandBuffers[imageIndex];
+  submitInfo.pCommandBuffers = &this->graphicsCommandBuffers[currentFrame];
   submitInfo.signalSemaphoreCount = 1;
   submitInfo.pSignalSemaphores =
       &this->renderingFinishedSemaphores[currentFrame];
@@ -72,7 +184,7 @@ void App::draw() {
   presentInfo.swapchainCount = 1;
   presentInfo.pSwapchains = &this->swapchain;
   presentInfo.pImageIndices = &imageIndex;
-  presentInfo.pResults = nullptr; // ?
+  presentInfo.pResults = nullptr;
 
   result = vkQueuePresentKHR(this->presentQueue, &presentInfo);
 

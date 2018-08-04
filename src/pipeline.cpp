@@ -1,4 +1,5 @@
 #include "app.hpp"
+#include "vertex.hpp"
 
 using namespace app;
 
@@ -42,14 +43,31 @@ void App::createPipeline() {
        .pName = "main",
        .pSpecializationInfo = nullptr}};
 
+  std::vector<VkVertexInputBindingDescription> vertexBindingDescriptions = {
+      {.binding = 0,
+       .stride = sizeof(VertexData),
+       .inputRate = VK_VERTEX_INPUT_RATE_VERTEX}};
+
+  std::vector<VkVertexInputAttributeDescription> vertexAttributeDescriptions = {
+      {.location = 0,
+       .binding = vertexBindingDescriptions[0].binding,
+       .format = VK_FORMAT_R32G32B32A32_SFLOAT,
+       .offset = offsetof(VertexData, pos)},
+      {.location = 1,
+       .binding = vertexBindingDescriptions[0].binding,
+       .format = VK_FORMAT_R32G32B32A32_SFLOAT,
+       .offset = offsetof(VertexData, color)}};
+
   VkPipelineVertexInputStateCreateInfo vertexInputStateCreateInfo = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
       .pNext = nullptr,
       .flags = 0,
-      .vertexBindingDescriptionCount = 0,
-      .pVertexBindingDescriptions = nullptr,
-      .vertexAttributeDescriptionCount = 0,
-      .pVertexAttributeDescriptions = nullptr};
+      .vertexBindingDescriptionCount =
+          static_cast<uint32_t>(vertexBindingDescriptions.size()),
+      .pVertexBindingDescriptions = vertexBindingDescriptions.data(),
+      .vertexAttributeDescriptionCount =
+          static_cast<uint32_t>(vertexAttributeDescriptions.size()),
+      .pVertexAttributeDescriptions = vertexAttributeDescriptions.data()};
 
   VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateCreateInfo = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
@@ -58,23 +76,27 @@ void App::createPipeline() {
       .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
       .primitiveRestartEnable = VK_FALSE};
 
-  VkViewport viewport = {.x = 0.0f,
-                         .y = 0.0f,
-                         .width = 300.0f,
-                         .height = 300.0f,
-                         .minDepth = 0.0f,
-                         .maxDepth = 1.0f};
-
-  VkRect2D scissor = {{.x = 0, .y = 0}, {.width = 300, .height = 300}};
-
   VkPipelineViewportStateCreateInfo viewportStateCreateInfo = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
       .pNext = nullptr,
       .flags = 0,
       .viewportCount = 1,
-      .pViewports = &viewport,
+      .pViewports = nullptr,
       .scissorCount = 1,
-      .pScissors = &scissor};
+      .pScissors = nullptr};
+
+  std::vector<VkDynamicState> dynamicStates = {
+      VK_DYNAMIC_STATE_VIEWPORT,
+      VK_DYNAMIC_STATE_SCISSOR,
+  };
+
+  VkPipelineDynamicStateCreateInfo dynamicStateCreateInfo = {
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = 0,
+      .dynamicStateCount = static_cast<uint32_t>(dynamicStates.size()),
+      .pDynamicStates = dynamicStates.data(),
+  };
 
   VkPipelineRasterizationStateCreateInfo rasterizationStateCreateInfo = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
@@ -83,7 +105,7 @@ void App::createPipeline() {
       .depthClampEnable = VK_FALSE,
       .rasterizerDiscardEnable = VK_FALSE,
       .polygonMode = VK_POLYGON_MODE_FILL,
-      .cullMode = VK_CULL_MODE_BACK_BIT,
+      .cullMode = VK_CULL_MODE_NONE,
       .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
       .depthBiasEnable = VK_FALSE,
       .depthBiasConstantFactor = 0.0f,
@@ -142,7 +164,7 @@ void App::createPipeline() {
         .pMultisampleState = &multisampleStateCreateInfo,
         .pDepthStencilState = nullptr,
         .pColorBlendState = &colorBlendStateCreateInfo,
-        .pDynamicState = nullptr,
+        .pDynamicState = &dynamicStateCreateInfo,
         .layout = pipelineLayout,
         .renderPass = this->renderPass,
         .subpass = 0,

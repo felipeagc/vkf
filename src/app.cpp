@@ -13,12 +13,17 @@ App::~App() {
 
     this->destroyResizables();
 
+    for (const auto &framebuffer : this->framebuffers) {
+      if (framebuffer != VK_NULL_HANDLE) {
+        vkDestroyFramebuffer(this->device, framebuffer, nullptr);
+      }
+    }
+
     for (const auto &imageView : this->swapchainImageViews) {
       if (imageView != VK_NULL_HANDLE) {
         vkDestroyImageView(this->device, imageView, nullptr);
       }
     }
-    this->swapchainImageViews.clear();
 
     if (this->swapchain != VK_NULL_HANDLE) {
       vkDestroySwapchainKHR(this->device, this->swapchain, nullptr);
@@ -40,8 +45,15 @@ App::~App() {
       }
     }
 
-    this->renderingFinishedSemaphores.clear();
-    this->imageAvailableSemaphores.clear();
+    if (this->vertexBuffer != VK_NULL_HANDLE) {
+      vkDestroyBuffer(this->device, this->vertexBuffer, nullptr);
+      this->vertexBuffer = VK_NULL_HANDLE;
+    }
+
+    if (this->memory != VK_NULL_HANDLE) {
+      vkFreeMemory(this->device, this->memory, nullptr);
+      this->memory = VK_NULL_HANDLE;
+    }
 
     vkDestroyDevice(this->device, nullptr);
   }
@@ -96,10 +108,10 @@ void App::init() {
   this->createSwapchain();
   this->createSwapchainImageViews();
   this->createRenderPass();
-  this->createFramebuffers();
   this->createPipeline();
   this->createCommandBuffers();
-  this->recordCommandBuffers();
+
+  this->createVertexBuffer();
 }
 
 void App::destroyResizables() {
@@ -111,7 +123,6 @@ void App::destroyResizables() {
       vkFreeCommandBuffers(this->device, this->graphicsCommandPool,
                            static_cast<uint32_t>(graphicsCommandBuffers.size()),
                            this->graphicsCommandBuffers.data());
-      this->graphicsCommandBuffers.clear();
     }
 
     if (this->graphicsCommandPool != VK_NULL_HANDLE) {
@@ -128,12 +139,5 @@ void App::destroyResizables() {
       vkDestroyRenderPass(this->device, this->renderPass, nullptr);
       this->renderPass = VK_NULL_HANDLE;
     }
-
-    for (const auto &framebuffer : this->framebuffers) {
-      if (framebuffer != VK_NULL_HANDLE) {
-        vkDestroyFramebuffer(this->device, framebuffer, nullptr);
-      }
-    }
-    this->framebuffers.clear();
   }
 }
