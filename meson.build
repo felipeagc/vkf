@@ -1,4 +1,4 @@
-project('vkintel', 'cpp')
+project('vkf', 'cpp')
 
 dependencies = [
   dependency('glfw3'),
@@ -30,7 +30,7 @@ sources = [
 ]
 
 executable(
-  'vkintel',
+  'vkf',
   sources,
   dependencies: dependencies
 )
