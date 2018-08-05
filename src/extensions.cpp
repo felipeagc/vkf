@@ -8,8 +8,8 @@ std::vector<const char *> App::getRequiredExtensions() {
   const char **glfwExtensions;
   glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
-  std::vector<const char *> extensions(glfwExtensions,
-                                       glfwExtensions + glfwExtensionCount);
+  std::vector<const char *> extensions(
+      glfwExtensions, glfwExtensions + glfwExtensionCount);
 
 #ifndef NDEBUG
   extensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);

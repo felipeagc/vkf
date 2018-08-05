@@ -35,13 +35,13 @@ App::~App() {
       }
 
       if (this->renderingFinishedSemaphores[i] != VK_NULL_HANDLE) {
-        vkDestroySemaphore(this->device, this->renderingFinishedSemaphores[i],
-                           nullptr);
+        vkDestroySemaphore(
+            this->device, this->renderingFinishedSemaphores[i], nullptr);
       }
 
       if (this->imageAvailableSemaphores[i] != VK_NULL_HANDLE) {
-        vkDestroySemaphore(this->device, this->imageAvailableSemaphores[i],
-                           nullptr);
+        vkDestroySemaphore(
+            this->device, this->imageAvailableSemaphores[i], nullptr);
       }
     }
 
@@ -137,9 +137,11 @@ void App::destroyResizables() {
 
     if ((this->graphicsCommandBuffers.size() > 0) &&
         (this->graphicsCommandBuffers[0] != VK_NULL_HANDLE)) {
-      vkFreeCommandBuffers(this->device, this->graphicsCommandPool,
-                           static_cast<uint32_t>(graphicsCommandBuffers.size()),
-                           this->graphicsCommandBuffers.data());
+      vkFreeCommandBuffers(
+          this->device,
+          this->graphicsCommandPool,
+          static_cast<uint32_t>(graphicsCommandBuffers.size()),
+          this->graphicsCommandBuffers.data());
     }
 
     if (this->graphicsCommandPool != VK_NULL_HANDLE) {

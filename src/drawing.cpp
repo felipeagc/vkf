@@ -19,14 +19,15 @@ void App::onResize() {
 }
 
 void App::prepareFrame(int currentFrame, uint32_t imageIndex) {
-  this->regenFramebuffer(this->framebuffers[currentFrame],
-                         this->swapchainImageViews[imageIndex]);
+  this->regenFramebuffer(
+      this->framebuffers[currentFrame], this->swapchainImageViews[imageIndex]);
 
-  VkCommandBufferBeginInfo beginInfo = {};
-  beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-  beginInfo.pNext = nullptr;
-  beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-  beginInfo.pInheritanceInfo = nullptr;
+  VkCommandBufferBeginInfo beginInfo = {
+      .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+      .pNext = nullptr,
+      .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
+      .pInheritanceInfo = nullptr,
+  };
 
   vkBeginCommandBuffer(this->graphicsCommandBuffers[currentFrame], &beginInfo);
 
@@ -52,10 +53,17 @@ void App::prepareFrame(int currentFrame, uint32_t imageIndex) {
         .subresourceRange = imageSubresourceRange,
     };
 
-    vkCmdPipelineBarrier(this->graphicsCommandBuffers[currentFrame],
-                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0,
-                         nullptr, 0, nullptr, 1, &barrierFromPresentToDraw);
+    vkCmdPipelineBarrier(
+        this->graphicsCommandBuffers[currentFrame],
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        0,
+        0,
+        nullptr,
+        0,
+        nullptr,
+        1,
+        &barrierFromPresentToDraw);
   }
 
   VkClearValue clearColor{{{1.0f, 0.8f, 0.4f, 0.0f}}};
@@ -67,13 +75,18 @@ void App::prepareFrame(int currentFrame, uint32_t imageIndex) {
       .framebuffer = this->framebuffers[currentFrame],
       .renderArea = {{.x = 0, .y = 0}, this->swapchainExtent},
       .clearValueCount = 1,
-      .pClearValues = &clearColor};
+      .pClearValues = &clearColor,
+  };
 
-  vkCmdBeginRenderPass(this->graphicsCommandBuffers[currentFrame],
-                       &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+  vkCmdBeginRenderPass(
+      this->graphicsCommandBuffers[currentFrame],
+      &renderPassBeginInfo,
+      VK_SUBPASS_CONTENTS_INLINE);
 
-  vkCmdBindPipeline(this->graphicsCommandBuffers[currentFrame],
-                    VK_PIPELINE_BIND_POINT_GRAPHICS, this->graphicsPipeline);
+  vkCmdBindPipeline(
+      this->graphicsCommandBuffers[currentFrame],
+      VK_PIPELINE_BIND_POINT_GRAPHICS,
+      this->graphicsPipeline);
 
   VkViewport viewport = {
       .x = 0.0f,
@@ -84,18 +97,22 @@ void App::prepareFrame(int currentFrame, uint32_t imageIndex) {
       .maxDepth = 1.0f,
   };
 
-  VkRect2D scissor = {{
-                          .x = 0,
-                          .y = 0,
-                      },
-                      this->swapchainExtent};
+  VkRect2D scissor{{
+                       .x = 0,
+                       .y = 0,
+                   },
+                   this->swapchainExtent};
 
   vkCmdSetViewport(this->graphicsCommandBuffers[currentFrame], 0, 1, &viewport);
   vkCmdSetScissor(this->graphicsCommandBuffers[currentFrame], 0, 1, &scissor);
 
   VkDeviceSize offset = 0;
-  vkCmdBindVertexBuffers(this->graphicsCommandBuffers[currentFrame], 0, 1,
-                         &this->vertexBuffer, &offset);
+  vkCmdBindVertexBuffers(
+      this->graphicsCommandBuffers[currentFrame],
+      0,
+      1,
+      &this->vertexBuffer,
+      &offset);
 
   vkCmdDraw(this->graphicsCommandBuffers[currentFrame], 3, 1, 0, 0);
 
@@ -115,10 +132,17 @@ void App::prepareFrame(int currentFrame, uint32_t imageIndex) {
         .subresourceRange = imageSubresourceRange,
     };
 
-    vkCmdPipelineBarrier(this->graphicsCommandBuffers[currentFrame],
-                         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0,
-                         nullptr, 1, &barrierFromDrawToPresent);
+    vkCmdPipelineBarrier(
+        this->graphicsCommandBuffers[currentFrame],
+        VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+        0,
+        0,
+        nullptr,
+        0,
+        nullptr,
+        1,
+        &barrierFromDrawToPresent);
   }
 
   if (vkEndCommandBuffer(this->graphicsCommandBuffers[currentFrame]) !=
@@ -128,18 +152,25 @@ void App::prepareFrame(int currentFrame, uint32_t imageIndex) {
 }
 
 void App::draw() {
-  if (vkWaitForFences(this->device, 1, &this->inFlightFences[currentFrame],
-                      VK_TRUE, UINT64_MAX) != VK_SUCCESS) {
+  if (vkWaitForFences(
+          this->device,
+          1,
+          &this->inFlightFences[currentFrame],
+          VK_TRUE,
+          UINT64_MAX) != VK_SUCCESS) {
     throw std::runtime_error("Waiting for fence took too long");
   }
 
   vkResetFences(this->device, 1, &this->inFlightFences[currentFrame]);
 
   uint32_t imageIndex;
-  VkResult result =
-      vkAcquireNextImageKHR(this->device, this->swapchain, UINT64_MAX,
-                            this->imageAvailableSemaphores[this->currentFrame],
-                            VK_NULL_HANDLE, &imageIndex);
+  VkResult result = vkAcquireNextImageKHR(
+      this->device,
+      this->swapchain,
+      UINT64_MAX,
+      this->imageAvailableSemaphores[this->currentFrame],
+      VK_NULL_HANDLE,
+      &imageIndex);
 
   switch (result) {
   case VK_SUCCESS:
@@ -158,34 +189,37 @@ void App::draw() {
   VkPipelineStageFlags waitDstStageMask =
       VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
-  VkSubmitInfo submitInfo = {};
-  submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-  submitInfo.pNext = nullptr;
-  submitInfo.waitSemaphoreCount = 1;
-  submitInfo.pWaitSemaphores = &this->imageAvailableSemaphores[currentFrame];
-  submitInfo.pWaitDstStageMask = &waitDstStageMask;
-  submitInfo.commandBufferCount = 1;
-  submitInfo.pCommandBuffers = &this->graphicsCommandBuffers[currentFrame];
-  submitInfo.signalSemaphoreCount = 1;
-  submitInfo.pSignalSemaphores =
-      &this->renderingFinishedSemaphores[currentFrame];
+  VkSubmitInfo submitInfo = {
+      .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+      .pNext = nullptr,
+      .waitSemaphoreCount = 1,
+      .pWaitSemaphores = &this->imageAvailableSemaphores[currentFrame],
+      .pWaitDstStageMask = &waitDstStageMask,
+      .commandBufferCount = 1,
+      .pCommandBuffers = &this->graphicsCommandBuffers[currentFrame],
+      .signalSemaphoreCount = 1,
+      .pSignalSemaphores = &this->renderingFinishedSemaphores[currentFrame],
+  };
 
-  if (vkQueueSubmit(this->graphicsQueue, 1, &submitInfo,
-                    this->inFlightFences[currentFrame]) != VK_SUCCESS) {
+  if (vkQueueSubmit(
+          this->graphicsQueue,
+          1,
+          &submitInfo,
+          this->inFlightFences[currentFrame]) != VK_SUCCESS) {
     throw std::runtime_error(
         "Failed to submit to the command buffer to presentation queue");
   }
 
-  VkPresentInfoKHR presentInfo = {};
-  presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-  presentInfo.pNext = nullptr;
-  presentInfo.waitSemaphoreCount = 1;
-  presentInfo.pWaitSemaphores =
-      &this->renderingFinishedSemaphores[currentFrame];
-  presentInfo.swapchainCount = 1;
-  presentInfo.pSwapchains = &this->swapchain;
-  presentInfo.pImageIndices = &imageIndex;
-  presentInfo.pResults = nullptr;
+  VkPresentInfoKHR presentInfo = {
+      .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+      .pNext = nullptr,
+      .waitSemaphoreCount = 1,
+      .pWaitSemaphores = &this->renderingFinishedSemaphores[currentFrame],
+      .swapchainCount = 1,
+      .pSwapchains = &this->swapchain,
+      .pImageIndices = &imageIndex,
+      .pResults = nullptr,
+  };
 
   result = vkQueuePresentKHR(this->presentQueue, &presentInfo);
 

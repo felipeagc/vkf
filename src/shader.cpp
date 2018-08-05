@@ -7,8 +7,8 @@ std::vector<char> loadShaderCode(const char *filename) {
   std::ifstream file(filename);
 
   if (file.fail()) {
-    throw std::runtime_error("Failed to open \"" + std::string(filename) +
-                             "\"");
+    throw std::runtime_error(
+        "Failed to open \"" + std::string(filename) + "\"");
   }
 
   std::streampos begin, end;
@@ -39,8 +39,9 @@ VkShaderModule App::createShaderModule(const char *filename) {
       reinterpret_cast<const uint32_t *>(code.data());
 
   VkShaderModule shaderModule;
-  if (vkCreateShaderModule(this->device, &shaderModuleCreateInfo, nullptr,
-                           &shaderModule) != VK_SUCCESS) {
+  if (vkCreateShaderModule(
+          this->device, &shaderModuleCreateInfo, nullptr, &shaderModule) !=
+      VK_SUCCESS) {
     throw std::runtime_error("Failed to create shader module");
   }
 

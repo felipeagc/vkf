@@ -15,8 +15,9 @@ VkPipelineLayout App::createPipelineLayout() {
   };
 
   VkPipelineLayout pipelineLayout;
-  if (vkCreatePipelineLayout(this->device, &layoutCreateInfo, nullptr,
-                             &pipelineLayout) != VK_SUCCESS) {
+  if (vkCreatePipelineLayout(
+          this->device, &layoutCreateInfo, nullptr, &pipelineLayout) !=
+      VK_SUCCESS) {
     throw std::runtime_error("Could not create pipeline layout");
   }
 
@@ -25,7 +26,8 @@ VkPipelineLayout App::createPipelineLayout() {
 
 void App::createPipeline() {
   auto vertexShaderModule = this->createShaderModule("shaders/shader.vert.spv");
-  auto fragmentShaderModule = this->createShaderModule("shaders/shader.frag.spv");
+  auto fragmentShaderModule =
+      this->createShaderModule("shaders/shader.frag.spv");
 
   std::vector<VkPipelineShaderStageCreateInfo> shaderStageCreateInfos = {
       {.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -172,9 +174,13 @@ void App::createPipeline() {
         .basePipelineIndex = -1,
     };
 
-    if (vkCreateGraphicsPipelines(this->device, VK_NULL_HANDLE, 1,
-                                  &pipelineCreateInfo, nullptr,
-                                  &this->graphicsPipeline) != VK_SUCCESS) {
+    if (vkCreateGraphicsPipelines(
+            this->device,
+            VK_NULL_HANDLE,
+            1,
+            &pipelineCreateInfo,
+            nullptr,
+            &this->graphicsPipeline) != VK_SUCCESS) {
       vkDestroyPipelineLayout(this->device, pipelineLayout, nullptr);
       throw std::runtime_error("Failed to create graphics pipeline");
     }

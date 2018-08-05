@@ -157,9 +157,9 @@ void App::createSwapchain() {
   }
 
   uint32_t formatCount;
-  if (vkGetPhysicalDeviceSurfaceFormatsKHR(this->physicalDevice, this->surface,
-                                           &formatCount,
-                                           nullptr) != VK_SUCCESS ||
+  if (vkGetPhysicalDeviceSurfaceFormatsKHR(
+          this->physicalDevice, this->surface, &formatCount, nullptr) !=
+          VK_SUCCESS ||
       formatCount == 0) {
     throw std::runtime_error(
         "Error occurred during presentation surface formats enumeration");
@@ -167,7 +167,9 @@ void App::createSwapchain() {
 
   std::vector<VkSurfaceFormatKHR> surfaceFormats(formatCount);
   if (vkGetPhysicalDeviceSurfaceFormatsKHR(
-          this->physicalDevice, this->surface, &formatCount,
+          this->physicalDevice,
+          this->surface,
+          &formatCount,
           surfaceFormats.data()) != VK_SUCCESS) {
     throw std::runtime_error(
         "Error occurred during presentation surface formats enumeration");
@@ -184,7 +186,9 @@ void App::createSwapchain() {
 
   std::vector<VkPresentModeKHR> presentModes(presentModeCount);
   if (vkGetPhysicalDeviceSurfacePresentModesKHR(
-          this->physicalDevice, this->surface, &presentModeCount,
+          this->physicalDevice,
+          this->surface,
+          &presentModeCount,
           presentModes.data()) != VK_SUCCESS) {
     throw std::runtime_error(
         "Error occurred during presentation surface present modes enumeration");
@@ -220,8 +224,8 @@ void App::createSwapchain() {
   createInfo.clipped = VK_TRUE;
   createInfo.oldSwapchain = oldSwapchain;
 
-  if (vkCreateSwapchainKHR(this->device, &createInfo, nullptr,
-                           &this->swapchain) != VK_SUCCESS) {
+  if (vkCreateSwapchainKHR(
+          this->device, &createInfo, nullptr, &this->swapchain) != VK_SUCCESS) {
     throw std::runtime_error("Failed to create swapchain");
   }
 
@@ -235,8 +239,8 @@ void App::createSwapchain() {
   uint32_t imageCount;
   vkGetSwapchainImagesKHR(device, this->swapchain, &imageCount, nullptr);
   this->swapchainImages.resize(imageCount);
-  vkGetSwapchainImagesKHR(device, this->swapchain, &imageCount,
-                          this->swapchainImages.data());
+  vkGetSwapchainImagesKHR(
+      device, this->swapchain, &imageCount, this->swapchainImages.data());
 
   canRender = true;
 }
@@ -266,8 +270,11 @@ void App::createSwapchainImageViews() {
         .layerCount = 1,
     };
 
-    if (vkCreateImageView(this->device, &createInfo, nullptr,
-                          &this->swapchainImageViews[i]) != VK_SUCCESS) {
+    if (vkCreateImageView(
+            this->device,
+            &createInfo,
+            nullptr,
+            &this->swapchainImageViews[i]) != VK_SUCCESS) {
       throw std::runtime_error("Failed to create image views for framebuffer");
     }
   }

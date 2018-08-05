@@ -19,7 +19,9 @@ bool App::checkPhysicalDeviceProperties(
 
   std::vector<VkExtensionProperties> availableExtensions(extensionCount);
   if (vkEnumerateDeviceExtensionProperties(
-          physicalDevice, nullptr, &extensionCount,
+          physicalDevice,
+          nullptr,
+          &extensionCount,
           availableExtensions.data()) != VK_SUCCESS) {
     std::cout << "Error occurred during physical device " << physicalDevice
               << " extension enumeration" << std::endl;
@@ -59,8 +61,8 @@ bool App::checkPhysicalDeviceProperties(
   }
 
   uint32_t queueFamilyCount = 0;
-  vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount,
-                                           nullptr);
+  vkGetPhysicalDeviceQueueFamilyProperties(
+      physicalDevice, &queueFamilyCount, nullptr);
 
   if (queueFamilyCount == 0) {
     std::cout << "Physical device " << physicalDevice
@@ -71,15 +73,15 @@ bool App::checkPhysicalDeviceProperties(
   std::vector<VkQueueFamilyProperties> queueFamilyProperties(queueFamilyCount);
   std::vector<VkBool32> queuePresentSupport(queueFamilyCount);
 
-  vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount,
-                                           queueFamilyProperties.data());
+  vkGetPhysicalDeviceQueueFamilyProperties(
+      physicalDevice, &queueFamilyCount, queueFamilyProperties.data());
 
   uint32_t graphicsQueueFamilyIndex = UINT32_MAX;
   uint32_t presentQueueFamilyIndex = UINT32_MAX;
 
   for (uint32_t i = 0; i < queueFamilyCount; i++) {
-    vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, this->surface,
-                                         &queuePresentSupport[i]);
+    vkGetPhysicalDeviceSurfaceSupportKHR(
+        physicalDevice, i, this->surface, &queuePresentSupport[i]);
 
     if (queueFamilyProperties[i].queueCount > 0 &&
         queueFamilyProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
@@ -126,8 +128,8 @@ void App::createDevice() {
   }
 
   std::vector<VkPhysicalDevice> physicalDevices(deviceCount);
-  if (vkEnumeratePhysicalDevices(this->instance, &deviceCount,
-                                 physicalDevices.data()) != VK_SUCCESS) {
+  if (vkEnumeratePhysicalDevices(
+          this->instance, &deviceCount, physicalDevices.data()) != VK_SUCCESS) {
     throw std::runtime_error(
         "Error occurred during physical device enumeration");
   }
@@ -135,9 +137,10 @@ void App::createDevice() {
   uint32_t selectedGraphicsQueueFamilyIndex = UINT32_MAX;
   uint32_t selectedPresentQueueFamilyIndex = UINT32_MAX;
   for (uint32_t i = 0; i < deviceCount; i++) {
-    if (checkPhysicalDeviceProperties(physicalDevices[i],
-                                      &selectedGraphicsQueueFamilyIndex,
-                                      &selectedPresentQueueFamilyIndex)) {
+    if (checkPhysicalDeviceProperties(
+            physicalDevices[i],
+            &selectedGraphicsQueueFamilyIndex,
+            &selectedPresentQueueFamilyIndex)) {
       physicalDevice = physicalDevices[i];
       break;
     }
@@ -192,8 +195,9 @@ void App::createDevice() {
 
   deviceCreateInfo.pEnabledFeatures = nullptr;
 
-  if (vkCreateDevice(this->physicalDevice, &deviceCreateInfo, nullptr,
-                     &this->device) != VK_SUCCESS) {
+  if (vkCreateDevice(
+          this->physicalDevice, &deviceCreateInfo, nullptr, &this->device) !=
+      VK_SUCCESS) {
     throw std::runtime_error("Failed to create logical device");
   }
 

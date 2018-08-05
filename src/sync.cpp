@@ -15,13 +15,18 @@ void App::createSyncObjects() {
   fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
   for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-    if ((vkCreateSemaphore(this->device, &semaphoreCreateInfo, nullptr,
-                           &this->imageAvailableSemaphores[i]) != VK_SUCCESS) ||
-        (vkCreateSemaphore(this->device, &semaphoreCreateInfo, nullptr,
-                           &this->renderingFinishedSemaphores[i]) !=
-         VK_SUCCESS) ||
-        (vkCreateFence(this->device, &fenceCreateInfo, nullptr,
-                       &inFlightFences[i]))) {
+    if ((vkCreateSemaphore(
+             this->device,
+             &semaphoreCreateInfo,
+             nullptr,
+             &this->imageAvailableSemaphores[i]) != VK_SUCCESS) ||
+        (vkCreateSemaphore(
+             this->device,
+             &semaphoreCreateInfo,
+             nullptr,
+             &this->renderingFinishedSemaphores[i]) != VK_SUCCESS) ||
+        (vkCreateFence(
+            this->device, &fenceCreateInfo, nullptr, &inFlightFences[i]))) {
       throw std::runtime_error("Failed to create semaphores");
     }
   }

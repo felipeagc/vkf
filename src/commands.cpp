@@ -16,9 +16,8 @@ void App::createCommandPool(uint32_t queueFamilyIndex, VkCommandPool *pool) {
   }
 }
 
-void App::allocateCommandBuffers(VkCommandPool pool,
-                                 uint32_t count,
-                                 VkCommandBuffer *commandBuffers) {
+void App::allocateCommandBuffers(
+    VkCommandPool pool, uint32_t count, VkCommandBuffer *commandBuffers) {
   VkCommandBufferAllocateInfo allocateInfo = {
       .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
       .pNext = nullptr,
@@ -34,10 +33,11 @@ void App::allocateCommandBuffers(VkCommandPool pool,
 }
 
 void App::createCommandBuffers() {
-  this->createCommandPool(this->graphicsQueueFamilyIndex,
-                          &this->graphicsCommandPool);
+  this->createCommandPool(
+      this->graphicsQueueFamilyIndex, &this->graphicsCommandPool);
 
-  this->allocateCommandBuffers(this->graphicsCommandPool,
-                               this->graphicsCommandBuffers.size(),
-                               this->graphicsCommandBuffers.data());
+  this->allocateCommandBuffers(
+      this->graphicsCommandPool,
+      this->graphicsCommandBuffers.size(),
+      this->graphicsCommandBuffers.data());
 }

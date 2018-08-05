@@ -62,8 +62,9 @@ void App::createRenderPass() {
       .pDependencies = dependencies.data(),
   };
 
-  if (vkCreateRenderPass(this->device, &renderPassCreateInfo, nullptr,
-                         &this->renderPass) != VK_SUCCESS) {
+  if (vkCreateRenderPass(
+          this->device, &renderPassCreateInfo, nullptr, &this->renderPass) !=
+      VK_SUCCESS) {
     throw std::runtime_error("Failed to create render pass");
   }
 }

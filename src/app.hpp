@@ -98,17 +98,17 @@ private:
 
   VkPipelineLayout createPipelineLayout(); // pipeline.cpp
 
-  VkBuffer createBuffer(size_t size,
-                        VkBufferUsageFlags usage); // vertex_buffer.cpp
-  VkDeviceMemory
-  allocateBufferMemory(VkBuffer &buffer,
-                       VkMemoryPropertyFlags properties); // vertex_buffer.cpp
+  VkBuffer createBuffer(
+      size_t size,
+      VkBufferUsageFlags usage); // vertex_buffer.cpp
+  VkDeviceMemory allocateBufferMemory(
+      VkBuffer &buffer,
+      VkMemoryPropertyFlags properties); // vertex_buffer.cpp
 
   void createCommandPool(uint32_t queueFamilyIndex, VkCommandPool *pool);
 
-  void allocateCommandBuffers(VkCommandPool pool,
-                              uint32_t count,
-                              VkCommandBuffer *commandBuffers);
+  void allocateCommandBuffers(
+      VkCommandPool pool, uint32_t count, VkCommandBuffer *commandBuffers);
 
   // Setup functions
   void createWindow();       // window.cpp
@@ -123,8 +123,9 @@ private:
   void createSwapchainImageViews(); // swapchain.cpp
   void createCommandBuffers();      // commands.cpp
 
-  void regenFramebuffer(VkFramebuffer &framebuffer,
-                        VkImageView imageView); // framebuffer.cpp
+  void regenFramebuffer(
+      VkFramebuffer &framebuffer,
+      VkImageView imageView); // framebuffer.cpp
 
   void createRenderPass(); // renderpass.cpp
   void createPipeline();   // pipeline.cpp

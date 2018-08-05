@@ -8,6 +8,7 @@ VkResult CreateDebugReportCallbackEXT(
     const VkAllocationCallbacks *pAllocator,
     VkDebugReportCallbackEXT *pCallback);
 
-void DestroyDebugReportCallbackEXT(VkInstance instance,
-                                   VkDebugReportCallbackEXT callback,
-                                   const VkAllocationCallbacks *pAllocator);
+void DestroyDebugReportCallbackEXT(
+    VkInstance instance,
+    VkDebugReportCallbackEXT callback,
+    const VkAllocationCallbacks *pAllocator);
