@@ -2,7 +2,8 @@
 
 using namespace app;
 
-VkDeviceMemory App::allocateBufferMemory(VkBuffer &buffer) {
+VkDeviceMemory App::allocateBufferMemory(VkBuffer &buffer,
+                                         VkMemoryPropertyFlags properties) {
   VkMemoryRequirements bufferMemoryRequirements;
   vkGetBufferMemoryRequirements(this->device, buffer,
                                 &bufferMemoryRequirements);
@@ -12,8 +13,7 @@ VkDeviceMemory App::allocateBufferMemory(VkBuffer &buffer) {
 
   for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++) {
     if ((bufferMemoryRequirements.memoryTypeBits & (1 << i)) &&
-        (memoryProperties.memoryTypes[i].propertyFlags &
-         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)) {
+        (memoryProperties.memoryTypes[i].propertyFlags & properties)) {
       VkMemoryAllocateInfo memoryAllocateInfo = {
           .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
           .pNext = nullptr,
@@ -33,13 +33,13 @@ VkDeviceMemory App::allocateBufferMemory(VkBuffer &buffer) {
   throw std::runtime_error("Failed to allocate memory");
 }
 
-VkBuffer App::createBuffer(size_t size) {
+VkBuffer App::createBuffer(size_t size, VkBufferUsageFlags usage) {
   VkBufferCreateInfo bufferCreateInfo = {
       .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
       .pNext = nullptr,
       .flags = 0,
       .size = size,
-      .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+      .usage = usage,
       .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
       .queueFamilyIndexCount = 0,
       .pQueueFamilyIndices = nullptr};
@@ -53,42 +53,106 @@ VkBuffer App::createBuffer(size_t size) {
   return buffer;
 }
 
-void App::createVertexBuffer() {
-  std::vector<VertexData> vertices = {
-      {{0.0, -0.5, 0.0, 1.0}, {1.0, 0.0, 0.0, 1.0}},
-      {{-0.5, 0.5, 0.0, 1.0}, {0.0, 1.0, 0.0, 1.0}},
-      {{0.5, 0.5, 0.0, 1.0}, {0.0, 0.0, 1.0, 1.0}},
-  };
+void App::createStagingBuffer() {
+  // TODO: change this later?
+  size_t size = 4000;
 
-  size_t size = sizeof(VertexData) * vertices.size();
+  this->stagingBuffer =
+      this->createBuffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
 
-  this->vertexBuffer = this->createBuffer(size);
-  this->memory = this->allocateBufferMemory(this->vertexBuffer);
+  // The COHERENT property makes sure the mapped memory is always updated and
+  // doesn't need explicit flushing
+  this->stagingMemory = this->allocateBufferMemory(
+      this->stagingBuffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-  if (vkBindBufferMemory(this->device, this->vertexBuffer, memory, 0) !=
-      VK_SUCCESS) {
+  if (vkBindBufferMemory(this->device, this->stagingBuffer, this->stagingMemory,
+                         0) != VK_SUCCESS) {
     throw std::runtime_error("Failed to bind buffer memory");
   }
+}
 
-  void *vertexBufferMemoryPointer;
-  if (vkMapMemory(this->device, memory, 0, size, 0,
-                  &vertexBufferMemoryPointer) != VK_SUCCESS) {
+void App::createVertexBuffer(const std::vector<VertexData> &vertices) {
+  size_t size = sizeof(VertexData) * vertices.size();
+
+  this->vertexBuffer =
+      this->createBuffer(size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+                                   VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+
+  this->vertexMemory = this->allocateBufferMemory(
+      this->vertexBuffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+  if (vkBindBufferMemory(this->device, this->vertexBuffer, this->vertexMemory,
+                         0) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to bind buffer memory");
+  }
+}
+
+void App::copyVertexData(const std::vector<VertexData> &vertices) {
+  size_t size = sizeof(VertexData) * vertices.size();
+
+  void *stagingBufferMemoryPointer;
+  if (vkMapMemory(this->device, this->stagingMemory, 0, size, 0,
+                  &stagingBufferMemoryPointer) != VK_SUCCESS) {
     throw std::runtime_error("Failed to map memory");
   }
 
-  memcpy(vertexBufferMemoryPointer, vertices.data(), size);
+  memcpy(stagingBufferMemoryPointer, vertices.data(), size);
 
-  VkMappedMemoryRange flushRange = {
-      .sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+  vkUnmapMemory(this->device, this->stagingMemory);
+
+  VkCommandBufferBeginInfo commandBufferBeginInfo = {
+      .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
       .pNext = nullptr,
-      .memory = memory,
-      .offset = 0,
-      .size = VK_WHOLE_SIZE,
+      .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+      .pInheritanceInfo = nullptr};
+
+  VkCommandBuffer commandBuffer = this->graphicsCommandBuffers[0];
+
+  vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
+
+  VkBufferCopy bufferCopyInfo = {
+      .srcOffset = 0,
+      .dstOffset = 0,
+      .size = size,
   };
 
-  if (vkFlushMappedMemoryRanges(this->device, 1, &flushRange) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to flush mapped memory ranges");
+  vkCmdCopyBuffer(commandBuffer, this->stagingBuffer, this->vertexBuffer, 1,
+                  &bufferCopyInfo);
+
+  VkBufferMemoryBarrier bufferMemoryBarrier = {
+      .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+      .pNext = nullptr,
+      .srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT,
+      .dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT,
+      .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+      .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+      .buffer = this->vertexBuffer,
+      .offset = 0,
+      .size = VK_WHOLE_SIZE};
+
+  vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                       VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, 0, 0, nullptr, 1,
+                       &bufferMemoryBarrier, 0, nullptr);
+
+  vkEndCommandBuffer(commandBuffer);
+
+  VkSubmitInfo submitInfo = {
+      .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+      .pNext = nullptr,
+      .waitSemaphoreCount = 0,
+      .pWaitSemaphores = nullptr,
+      .pWaitDstStageMask = nullptr,
+      .commandBufferCount = 1,
+      .pCommandBuffers = &commandBuffer,
+      .signalSemaphoreCount = 0,
+      .pSignalSemaphores = nullptr,
+  };
+
+  if (vkQueueSubmit(this->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) !=
+      VK_SUCCESS) {
+    throw std::runtime_error("Failed to submit command buffer to queue");
   }
 
-  vkUnmapMemory(this->device, memory);
+  vkQueueWaitIdle(this->graphicsQueue);
 }

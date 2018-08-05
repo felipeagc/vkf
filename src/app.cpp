@@ -50,9 +50,19 @@ App::~App() {
       this->vertexBuffer = VK_NULL_HANDLE;
     }
 
-    if (this->memory != VK_NULL_HANDLE) {
-      vkFreeMemory(this->device, this->memory, nullptr);
-      this->memory = VK_NULL_HANDLE;
+    if (this->vertexMemory != VK_NULL_HANDLE) {
+      vkFreeMemory(this->device, this->vertexMemory, nullptr);
+      this->vertexMemory = VK_NULL_HANDLE;
+    }
+
+    if (this->stagingBuffer != VK_NULL_HANDLE) {
+      vkDestroyBuffer(this->device, this->stagingBuffer, nullptr);
+      this->stagingBuffer = VK_NULL_HANDLE;
+    }
+
+    if (this->stagingMemory != VK_NULL_HANDLE) {
+      vkFreeMemory(this->device, this->stagingMemory, nullptr);
+      this->stagingMemory = VK_NULL_HANDLE;
     }
 
     vkDestroyDevice(this->device, nullptr);
@@ -85,8 +95,6 @@ void App::run() {
 
     if (this->canRender) {
       this->draw();
-    } else {
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
   }
 }
@@ -111,7 +119,16 @@ void App::init() {
   this->createPipeline();
   this->createCommandBuffers();
 
-  this->createVertexBuffer();
+  this->createStagingBuffer();
+
+  std::vector<VertexData> vertices = {
+      {{0.0, -0.5, 0.0, 1.0}, {1.0, 0.0, 0.0, 1.0}},
+      {{-0.5, 0.5, 0.0, 1.0}, {0.0, 1.0, 0.0, 1.0}},
+      {{0.5, 0.5, 0.0, 1.0}, {0.0, 0.0, 1.0, 1.0}},
+  };
+
+  this->createVertexBuffer(vertices);
+  this->copyVertexData(vertices);
 }
 
 void App::destroyResizables() {

@@ -155,7 +155,8 @@ void App::draw() {
 
   this->prepareFrame(currentFrame, imageIndex);
 
-  VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+  VkPipelineStageFlags waitDstStageMask =
+      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
   VkSubmitInfo submitInfo = {};
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;

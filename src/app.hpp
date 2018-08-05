@@ -62,8 +62,13 @@ private:
   VkCommandPool graphicsCommandPool{VK_NULL_HANDLE};
   std::vector<VkCommandBuffer> graphicsCommandBuffers{MAX_FRAMES_IN_FLIGHT};
 
+  // Local stuff
+  // TODO: remove later
   VkBuffer vertexBuffer{VK_NULL_HANDLE};
-  VkDeviceMemory memory{VK_NULL_HANDLE};
+  VkDeviceMemory vertexMemory{VK_NULL_HANDLE};
+
+  VkBuffer stagingBuffer{VK_NULL_HANDLE};
+  VkDeviceMemory stagingMemory{VK_NULL_HANDLE};
 
   bool canRender = false;
 
@@ -93,8 +98,11 @@ private:
 
   VkPipelineLayout createPipelineLayout(); // pipeline.cpp
 
-  VkBuffer createBuffer(size_t size);                    // vertex_buffer.cpp
-  VkDeviceMemory allocateBufferMemory(VkBuffer &buffer); // vertex_buffer.cpp
+  VkBuffer createBuffer(size_t size,
+                        VkBufferUsageFlags usage); // vertex_buffer.cpp
+  VkDeviceMemory
+  allocateBufferMemory(VkBuffer &buffer,
+                       VkMemoryPropertyFlags properties); // vertex_buffer.cpp
 
   void createCommandPool(uint32_t queueFamilyIndex, VkCommandPool *pool);
 
@@ -121,7 +129,11 @@ private:
   void createRenderPass(); // renderpass.cpp
   void createPipeline();   // pipeline.cpp
 
-  void createVertexBuffer(); // vertex_buffer.cpp
+  void createStagingBuffer(); // vertex_buffer.cpp
+  void createVertexBuffer(
+      const std::vector<VertexData> &vertices); // vertex_buffer.cpp
+  void
+  copyVertexData(const std::vector<VertexData> &vertices); // vertex_buffer.cpp
 
   void prepareFrame(int currentFrame, uint32_t imageIndex); // drawing.cpp
   void draw();                                              // drawing.cpp
