@@ -1,5 +1,6 @@
-project('vkf', 'cpp')
+project('vkf', 'cpp', 'c')
 
+subdir('external')
 subdir('shaders')
 
 dependencies = [
@@ -34,5 +35,6 @@ sources = [
 executable(
   'vkf',
   sources,
-  dependencies: dependencies
+  dependencies: dependencies,
+  link_with: stb_image_lib
 )
