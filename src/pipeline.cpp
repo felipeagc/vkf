@@ -30,35 +30,36 @@ void App::createPipeline() {
       this->createShaderModule("shaders/shader.frag.spv");
 
   std::vector<VkPipelineShaderStageCreateInfo> shaderStageCreateInfos = {
-      {.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-       .pNext = nullptr,
-       .flags = 0,
-       .stage = VK_SHADER_STAGE_VERTEX_BIT,
-       .module = vertexShaderModule,
-       .pName = "main",
-       .pSpecializationInfo = nullptr},
-      {.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-       .pNext = nullptr,
-       .flags = 0,
-       .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-       .module = fragmentShaderModule,
-       .pName = "main",
-       .pSpecializationInfo = nullptr}};
+      {
+          .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+          .pNext = nullptr,
+          .flags = 0,
+          .stage = VK_SHADER_STAGE_VERTEX_BIT,
+          .module = vertexShaderModule,
+          .pName = "main",
+          .pSpecializationInfo = nullptr,
+      },
+      {
+          .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+          .pNext = nullptr,
+          .flags = 0,
+          .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+          .module = fragmentShaderModule,
+          .pName = "main",
+          .pSpecializationInfo = nullptr,
+      },
+  };
 
   std::vector<VkVertexInputBindingDescription> vertexBindingDescriptions = {
-      {.binding = 0,
-       .stride = sizeof(VertexData),
-       .inputRate = VK_VERTEX_INPUT_RATE_VERTEX}};
+      {
+          .binding = 0,
+          .stride = sizeof(VertexData),
+          .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+      },
+  };
 
-  std::vector<VkVertexInputAttributeDescription> vertexAttributeDescriptions = {
-      {.location = 0,
-       .binding = vertexBindingDescriptions[0].binding,
-       .format = VK_FORMAT_R32G32B32A32_SFLOAT,
-       .offset = offsetof(VertexData, pos)},
-      {.location = 1,
-       .binding = vertexBindingDescriptions[0].binding,
-       .format = VK_FORMAT_R32G32B32A32_SFLOAT,
-       .offset = offsetof(VertexData, color)}};
+  auto vertexAttributeDescriptions = VertexData::getVertexAttributeDescriptions(
+      vertexBindingDescriptions[0].binding);
 
   VkPipelineVertexInputStateCreateInfo vertexInputStateCreateInfo = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
@@ -69,14 +70,16 @@ void App::createPipeline() {
       .pVertexBindingDescriptions = vertexBindingDescriptions.data(),
       .vertexAttributeDescriptionCount =
           static_cast<uint32_t>(vertexAttributeDescriptions.size()),
-      .pVertexAttributeDescriptions = vertexAttributeDescriptions.data()};
+      .pVertexAttributeDescriptions = vertexAttributeDescriptions.data(),
+  };
 
   VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateCreateInfo = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
       .pNext = nullptr,
       .flags = 0,
       .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-      .primitiveRestartEnable = VK_FALSE};
+      .primitiveRestartEnable = VK_FALSE,
+  };
 
   VkPipelineViewportStateCreateInfo viewportStateCreateInfo = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
@@ -85,7 +88,8 @@ void App::createPipeline() {
       .viewportCount = 1,
       .pViewports = nullptr,
       .scissorCount = 1,
-      .pScissors = nullptr};
+      .pScissors = nullptr,
+  };
 
   std::vector<VkDynamicState> dynamicStates = {
       VK_DYNAMIC_STATE_VIEWPORT,
@@ -147,7 +151,8 @@ void App::createPipeline() {
       .logicOp = VK_LOGIC_OP_COPY,
       .attachmentCount = 1,
       .pAttachments = &colorBlendAttachmentState,
-      .blendConstants = {0.0f, 0.0f, 0.0f, 0.0f}};
+      .blendConstants = {0.0f, 0.0f, 0.0f, 0.0f},
+  };
 
   try {
     auto pipelineLayout = this->createPipelineLayout();
