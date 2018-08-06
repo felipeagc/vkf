@@ -7,7 +7,8 @@ dependencies = [
   dependency('glfw3'),
   dependency('vulkan'),
   dependency('glm'),
-  stb_image_dep
+  stb_image_dep,
+  vma_dep
 ]
 
 sources = [
