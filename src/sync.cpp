@@ -26,7 +26,10 @@ void App::createSyncObjects() {
              nullptr,
              &this->renderingFinishedSemaphores[i]) != VK_SUCCESS) ||
         (vkCreateFence(
-            this->device, &fenceCreateInfo, nullptr, &inFlightFences[i]))) {
+            this->device,
+            &fenceCreateInfo,
+            nullptr,
+            &inFlightFences[i]) != VK_SUCCESS)) {
       throw std::runtime_error("Failed to create semaphores");
     }
   }

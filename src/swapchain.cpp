@@ -7,7 +7,7 @@ uint32_t App::getSwapchainNumImages(
     const VkSurfaceCapabilitiesKHR &surfaceCapabilities) {
   uint32_t imageCount = surfaceCapabilities.minImageCount + 1;
 
-  if (surfaceCapabilities.minImageCount > 0 &&
+  if (surfaceCapabilities.maxImageCount > 0 &&
       imageCount > surfaceCapabilities.maxImageCount) {
     imageCount = surfaceCapabilities.maxImageCount;
   }
