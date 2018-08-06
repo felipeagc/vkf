@@ -57,6 +57,7 @@ private:
   VkRenderPass renderPass;
   std::vector<VkFramebuffer> framebuffers{MAX_FRAMES_IN_FLIGHT};
 
+  VkPipelineLayout pipelineLayout{VK_NULL_HANDLE};
   VkPipeline graphicsPipeline{VK_NULL_HANDLE};
 
   VkCommandPool graphicsCommandPool{VK_NULL_HANDLE};
@@ -67,8 +68,17 @@ private:
   VkBuffer vertexBuffer{VK_NULL_HANDLE};
   VkDeviceMemory vertexMemory{VK_NULL_HANDLE};
 
+  VkImage textureImage{VK_NULL_HANDLE};
+  VkImageView textureImageView{VK_NULL_HANDLE};
+  VkSampler textureSampler{VK_NULL_HANDLE};
+  VkDeviceMemory textureMemory{VK_NULL_HANDLE};
+
   VkBuffer stagingBuffer{VK_NULL_HANDLE};
   VkDeviceMemory stagingMemory{VK_NULL_HANDLE};
+
+  VkDescriptorSetLayout descriptorSetLayout{VK_NULL_HANDLE};
+  VkDescriptorPool descriptorPool{VK_NULL_HANDLE};
+  VkDescriptorSet descriptorSet{VK_NULL_HANDLE};
 
   bool canRender = false;
 
@@ -130,11 +140,40 @@ private:
   void createRenderPass(); // renderpass.cpp
   void createPipeline();   // pipeline.cpp
 
+  void
+  createDescriptorSetLayout(VkDescriptorSetLayout *layout); // descriptors.cpp
+  void
+  createDescriptorPool(VkDescriptorPool *descriptorPool); // descriptors.cpp
+  void allocateDescriptorSet(
+      VkDescriptorPool descriptorPool,
+      VkDescriptorSetLayout descriptorSetLayout,
+      VkDescriptorSet *descriptorSet); // descriptors.cpp
+  void updateDescriptorSetWithTexture(
+      VkDescriptorSet descriptorSet,
+      VkSampler sampler,
+      VkImageView imageView); // descriptors.cpp
+
   void createStagingBuffer(); // vertex_buffer.cpp
   void createVertexBuffer(
       const std::vector<VertexData> &vertices); // vertex_buffer.cpp
   void
   copyVertexData(const std::vector<VertexData> &vertices); // vertex_buffer.cpp
+
+  void
+  createImage(uint32_t width, uint32_t height, VkImage *image); // image.cpp
+  void allocateImageMemory(
+      VkImage &image,
+      VkMemoryPropertyFlags property,
+      VkDeviceMemory *memory); // image.cpp
+  void
+  createImageView(const VkImage image, VkImageView *imageView); // image.cpp
+  void createSampler(VkSampler *sampler);
+  void createTexture(); // image.cpp
+  void copyTextureData(
+      unsigned char *textureData,
+      size_t dataSize,
+      uint32_t width,
+      uint32_t height); // image.cpp
 
   void prepareFrame(int currentFrame, uint32_t imageIndex); // drawing.cpp
   void draw();                                              // drawing.cpp

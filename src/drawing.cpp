@@ -114,7 +114,17 @@ void App::prepareFrame(int currentFrame, uint32_t imageIndex) {
       &this->vertexBuffer,
       &offset);
 
-  vkCmdDraw(this->graphicsCommandBuffers[currentFrame], 3, 1, 0, 0);
+  vkCmdBindDescriptorSets(
+      this->graphicsCommandBuffers[currentFrame],
+      VK_PIPELINE_BIND_POINT_GRAPHICS,
+      this->pipelineLayout,
+      0,
+      1,
+      &this->descriptorSet,
+      0,
+      nullptr);
+
+  vkCmdDraw(this->graphicsCommandBuffers[currentFrame], 4, 1, 0, 0);
 
   vkCmdEndRenderPass(this->graphicsCommandBuffers[currentFrame]);
 

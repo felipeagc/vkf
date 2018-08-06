@@ -65,6 +65,42 @@ App::~App() {
       this->stagingMemory = VK_NULL_HANDLE;
     }
 
+    if (this->textureImage != VK_NULL_HANDLE) {
+      vkDestroyImage(this->device, this->textureImage, nullptr);
+      this->textureImage = VK_NULL_HANDLE;
+    }
+
+    if (this->textureImageView != VK_NULL_HANDLE) {
+      vkDestroyImageView(this->device, this->textureImageView, nullptr);
+      this->textureImageView = VK_NULL_HANDLE;
+    }
+
+    if (this->textureSampler != VK_NULL_HANDLE) {
+      vkDestroySampler(this->device, this->textureSampler, nullptr);
+      this->textureSampler = VK_NULL_HANDLE;
+    }
+
+    if (this->textureMemory != VK_NULL_HANDLE) {
+      vkFreeMemory(this->device, this->textureMemory, nullptr);
+      this->textureMemory = VK_NULL_HANDLE;
+    }
+
+    if (this->descriptorPool != VK_NULL_HANDLE) {
+      vkDestroyDescriptorPool(this->device, this->descriptorPool, nullptr);
+      this->descriptorPool = VK_NULL_HANDLE;
+    }
+
+    if (this->descriptorSetLayout != VK_NULL_HANDLE) {
+      vkDestroyDescriptorSetLayout(
+          this->device, this->descriptorSetLayout, nullptr);
+      this->descriptorSetLayout = VK_NULL_HANDLE;
+    }
+
+    if (this->pipelineLayout != VK_NULL_HANDLE) {
+      vkDestroyPipelineLayout(this->device, this->pipelineLayout, nullptr);
+      this->pipelineLayout = VK_NULL_HANDLE;
+    }
+
     vkDestroyDevice(this->device, nullptr);
   }
 
@@ -116,19 +152,36 @@ void App::init() {
   this->createSwapchain();
   this->createSwapchainImageViews();
   this->createRenderPass();
-  this->createPipeline();
   this->createCommandBuffers();
+
+  this->createDescriptorSetLayout(&this->descriptorSetLayout);
+
+  this->createPipeline();
+
+  this->createDescriptorPool(&this->descriptorPool);
+  this->allocateDescriptorSet(
+      this->descriptorPool, this->descriptorSetLayout, &this->descriptorSet);
 
   this->createStagingBuffer();
 
   std::vector<VertexData> vertices = {
-      {{0.0, -0.5, 0.0}, {1.0, 0.0, 0.0}},
-      {{-0.5, 0.5, 0.0}, {0.0, 1.0, 0.0}},
-      {{0.5, 0.5, 0.0}, {0.0, 0.0, 1.0}},
+      // top left
+      {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+      // bottom left
+      {{-0.5f, 0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}},
+      // top right
+      {{0.5f, -0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f}},
+      // bottom right
+      {{0.5f, 0.5f, 0.0f}, {0.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
   };
 
   this->createVertexBuffer(vertices);
   this->copyVertexData(vertices);
+
+  this->createTexture();
+
+  this->updateDescriptorSetWithTexture(
+      this->descriptorSet, this->textureSampler, this->textureImageView);
 }
 
 void App::destroyResizables() {
@@ -147,6 +200,11 @@ void App::destroyResizables() {
     if (this->graphicsCommandPool != VK_NULL_HANDLE) {
       vkDestroyCommandPool(this->device, this->graphicsCommandPool, nullptr);
       this->graphicsCommandPool = VK_NULL_HANDLE;
+    }
+
+    if (this->pipelineLayout != VK_NULL_HANDLE) {
+      vkDestroyPipelineLayout(this->device, this->pipelineLayout, nullptr);
+      this->pipelineLayout = VK_NULL_HANDLE;
     }
 
     if (this->graphicsPipeline != VK_NULL_HANDLE) {

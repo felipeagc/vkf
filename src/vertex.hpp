@@ -8,6 +8,7 @@ namespace app {
 struct VertexData {
   glm::vec3 pos;
   glm::vec3 color;
+  glm::vec2 texCoord;
 
   static std::vector<VkVertexInputAttributeDescription>
   getVertexAttributeDescriptions(const uint32_t binding) {
@@ -24,6 +25,12 @@ struct VertexData {
                 .binding = binding,
                 .format = VK_FORMAT_R32G32B32_SFLOAT,
                 .offset = offsetof(VertexData, color),
+            },
+            {
+                .location = 2,
+                .binding = binding,
+                .format = VK_FORMAT_R32G32_SFLOAT,
+                .offset = offsetof(VertexData, texCoord),
             },
         };
 

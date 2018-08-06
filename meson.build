@@ -6,7 +6,8 @@ subdir('shaders')
 dependencies = [
   dependency('glfw3'),
   dependency('vulkan'),
-  dependency('glm')
+  dependency('glm'),
+  stb_image_dep
 ]
 
 sources = [
@@ -29,12 +30,13 @@ sources = [
   'src/framebuffer.cpp',
   'src/shader.cpp',
   'src/pipeline.cpp',
-  'src/vertex_buffer.cpp',
+  'src/buffers.cpp',
+  'src/image.cpp',
+  'src/descriptors.cpp',
 ]
 
 executable(
   'vkf',
   sources,
   dependencies: dependencies,
-  link_with: stb_image_lib
 )

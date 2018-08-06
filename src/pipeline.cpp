@@ -8,8 +8,8 @@ VkPipelineLayout App::createPipelineLayout() {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
       .pNext = nullptr,
       .flags = 0,
-      .setLayoutCount = 0,
-      .pSetLayouts = nullptr,
+      .setLayoutCount = 1,
+      .pSetLayouts = &descriptorSetLayout,
       .pushConstantRangeCount = 0,
       .pPushConstantRanges = nullptr,
   };
@@ -77,7 +77,7 @@ void App::createPipeline() {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
       .pNext = nullptr,
       .flags = 0,
-      .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+      .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
       .primitiveRestartEnable = VK_FALSE,
   };
 
@@ -155,7 +155,7 @@ void App::createPipeline() {
   };
 
   try {
-    auto pipelineLayout = this->createPipelineLayout();
+    this->pipelineLayout = this->createPipelineLayout();
 
     VkGraphicsPipelineCreateInfo pipelineCreateInfo = {
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
@@ -172,7 +172,7 @@ void App::createPipeline() {
         .pDepthStencilState = nullptr,
         .pColorBlendState = &colorBlendStateCreateInfo,
         .pDynamicState = &dynamicStateCreateInfo,
-        .layout = pipelineLayout,
+        .layout = this->pipelineLayout,
         .renderPass = this->renderPass,
         .subpass = 0,
         .basePipelineHandle = VK_NULL_HANDLE,
@@ -186,11 +186,11 @@ void App::createPipeline() {
             &pipelineCreateInfo,
             nullptr,
             &this->graphicsPipeline) != VK_SUCCESS) {
-      vkDestroyPipelineLayout(this->device, pipelineLayout, nullptr);
+      vkDestroyPipelineLayout(this->device, this->pipelineLayout, nullptr);
       throw std::runtime_error("Failed to create graphics pipeline");
     }
 
-    vkDestroyPipelineLayout(this->device, pipelineLayout, nullptr);
+    // vkDestroyPipelineLayout(this->device, this->pipelineLayout, nullptr);
   } catch (const std::exception &e) {
     vkDestroyShaderModule(this->device, vertexShaderModule, nullptr);
     vkDestroyShaderModule(this->device, fragmentShaderModule, nullptr);

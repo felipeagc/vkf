@@ -18,7 +18,8 @@ App::allocateBufferMemory(VkBuffer &buffer, VkMemoryPropertyFlags properties) {
           .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
           .pNext = nullptr,
           .allocationSize = bufferMemoryRequirements.size,
-          .memoryTypeIndex = i};
+          .memoryTypeIndex = i,
+      };
 
       VkDeviceMemory memory;
       if (vkAllocateMemory(
@@ -43,7 +44,8 @@ VkBuffer App::createBuffer(size_t size, VkBufferUsageFlags usage) {
       .usage = usage,
       .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
       .queueFamilyIndexCount = 0,
-      .pQueueFamilyIndices = nullptr};
+      .pQueueFamilyIndices = nullptr,
+  };
 
   VkBuffer buffer = VK_NULL_HANDLE;
   if (vkCreateBuffer(this->device, &bufferCreateInfo, nullptr, &buffer) !=
@@ -56,7 +58,7 @@ VkBuffer App::createBuffer(size_t size, VkBufferUsageFlags usage) {
 
 void App::createStagingBuffer() {
   // TODO: change this later?
-  size_t size = 4000;
+  size_t size = 10000000;
 
   this->stagingBuffer =
       this->createBuffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
@@ -114,7 +116,8 @@ void App::copyVertexData(const std::vector<VertexData> &vertices) {
       .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
       .pNext = nullptr,
       .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-      .pInheritanceInfo = nullptr};
+      .pInheritanceInfo = nullptr,
+  };
 
   VkCommandBuffer commandBuffer = this->graphicsCommandBuffers[0];
 
@@ -142,7 +145,8 @@ void App::copyVertexData(const std::vector<VertexData> &vertices) {
       .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
       .buffer = this->vertexBuffer,
       .offset = 0,
-      .size = VK_WHOLE_SIZE};
+      .size = VK_WHOLE_SIZE,
+  };
 
   vkCmdPipelineBarrier(
       commandBuffer,

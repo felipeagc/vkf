@@ -8,3 +8,9 @@ stb_image_lib = library(
   include_directories: include_directories('include'),
   dependencies: m_dep
 )
+
+stb_image_dep = declare_dependency(
+  link_with: stb_image_lib,
+  include_directories: include_directories('include'),
+  dependencies: m_dep
+)
