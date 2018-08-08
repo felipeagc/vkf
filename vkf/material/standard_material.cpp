@@ -24,11 +24,12 @@ std::vector<char> loadShaderCode(const char *filename) {
   return result;
 }
 
-StandardMaterial::StandardMaterial(VulkanBackend &backend)
+StandardMaterial::StandardMaterial(VulkanBackend *backend)
     : Material(
           backend,
-          backend.createShaderModule(loadShaderCode("shaders/shader.vert.spv")),
-          backend.createShaderModule(
+          backend->createShaderModule(
+              loadShaderCode("shaders/shader.vert.spv")),
+          backend->createShaderModule(
               loadShaderCode("shaders/shader.frag.spv"))) {
   this->createDescriptorSetLayout();
 
@@ -39,41 +40,41 @@ StandardMaterial::StandardMaterial(VulkanBackend &backend)
 }
 
 StandardMaterial::~StandardMaterial() {
-  if (this->backend.device != VK_NULL_HANDLE) {
-    vkDeviceWaitIdle(this->backend.device);
+  if (this->backend->device != VK_NULL_HANDLE) {
+    vkDeviceWaitIdle(this->backend->device);
 
     if (this->pipelineLayout != VK_NULL_HANDLE) {
       vkDestroyPipelineLayout(
-          this->backend.device, this->pipelineLayout, nullptr);
+          this->backend->device, this->pipelineLayout, nullptr);
       this->pipelineLayout = VK_NULL_HANDLE;
     }
 
     if (this->pipeline != VK_NULL_HANDLE) {
-      vkDestroyPipeline(this->backend.device, this->pipeline, nullptr);
+      vkDestroyPipeline(this->backend->device, this->pipeline, nullptr);
       this->pipeline = VK_NULL_HANDLE;
     }
 
     if (this->descriptorPool != VK_NULL_HANDLE) {
       vkDestroyDescriptorPool(
-          this->backend.device, this->descriptorPool, nullptr);
+          this->backend->device, this->descriptorPool, nullptr);
       this->descriptorPool = VK_NULL_HANDLE;
     }
 
     if (this->descriptorSetLayout != VK_NULL_HANDLE) {
       vkDestroyDescriptorSetLayout(
-          this->backend.device, this->descriptorSetLayout, nullptr);
+          this->backend->device, this->descriptorSetLayout, nullptr);
       this->descriptorSetLayout = VK_NULL_HANDLE;
     }
 
     if (this->vertexShaderModule != VK_NULL_HANDLE) {
       vkDestroyShaderModule(
-          this->backend.device, this->vertexShaderModule, nullptr);
+          this->backend->device, this->vertexShaderModule, nullptr);
       this->vertexShaderModule = VK_NULL_HANDLE;
     }
 
     if (this->fragmentShaderModule != VK_NULL_HANDLE) {
       vkDestroyShaderModule(
-          this->backend.device, this->fragmentShaderModule, nullptr);
+          this->backend->device, this->fragmentShaderModule, nullptr);
       this->fragmentShaderModule = VK_NULL_HANDLE;
     }
   }
@@ -85,17 +86,17 @@ void StandardMaterial::bindPipeline(VkCommandBuffer commandBuffer) {
 }
 
 void StandardMaterial::onResize(uint32_t width, uint32_t height) {
-  if (this->backend.device != VK_NULL_HANDLE) {
-    vkDeviceWaitIdle(this->backend.device);
+  if (this->backend->device != VK_NULL_HANDLE) {
+    vkDeviceWaitIdle(this->backend->device);
 
     if (this->pipelineLayout != VK_NULL_HANDLE) {
       vkDestroyPipelineLayout(
-          this->backend.device, this->pipelineLayout, nullptr);
+          this->backend->device, this->pipelineLayout, nullptr);
       this->pipelineLayout = VK_NULL_HANDLE;
     }
 
     if (this->pipeline != VK_NULL_HANDLE) {
-      vkDestroyPipeline(this->backend.device, this->pipeline, nullptr);
+      vkDestroyPipeline(this->backend->device, this->pipeline, nullptr);
       this->pipeline = VK_NULL_HANDLE;
     }
   }
@@ -127,7 +128,7 @@ VkPipelineLayout StandardMaterial::createPipelineLayout() {
 
   VkPipelineLayout pipelineLayout;
   if (vkCreatePipelineLayout(
-          this->backend.device, &layoutCreateInfo, nullptr, &pipelineLayout) !=
+          this->backend->device, &layoutCreateInfo, nullptr, &pipelineLayout) !=
       VK_SUCCESS) {
     throw std::runtime_error("Could not create pipeline layout");
   }
@@ -280,21 +281,21 @@ void StandardMaterial::createPipeline() {
       .pColorBlendState = &colorBlendStateCreateInfo,
       .pDynamicState = &dynamicStateCreateInfo,
       .layout = this->pipelineLayout,
-      .renderPass = this->backend.renderPass,
+      .renderPass = this->backend->renderPass,
       .subpass = 0,
       .basePipelineHandle = VK_NULL_HANDLE,
       .basePipelineIndex = -1,
   };
 
   if (vkCreateGraphicsPipelines(
-          this->backend.device,
+          this->backend->device,
           VK_NULL_HANDLE,
           1,
           &pipelineCreateInfo,
           nullptr,
           &this->pipeline) != VK_SUCCESS) {
     vkDestroyPipelineLayout(
-        this->backend.device, this->pipelineLayout, nullptr);
+        this->backend->device, this->pipelineLayout, nullptr);
     throw std::runtime_error("Failed to create graphics pipeline");
   }
 }
@@ -317,7 +318,7 @@ void StandardMaterial::createDescriptorSetLayout() {
   };
 
   if (vkCreateDescriptorSetLayout(
-          this->backend.device,
+          this->backend->device,
           &descriptorSetLayoutCreateInfo,
           nullptr,
           &this->descriptorSetLayout) != VK_SUCCESS) {
@@ -341,7 +342,7 @@ void StandardMaterial::createDescriptorPool() {
   };
 
   if (vkCreateDescriptorPool(
-          this->backend.device,
+          this->backend->device,
           &descriptorPoolCreateInfo,
           nullptr,
           &this->descriptorPool) != VK_SUCCESS) {
@@ -364,7 +365,7 @@ void StandardMaterial::allocateDescriptorSets() {
   };
 
   if (vkAllocateDescriptorSets(
-          this->backend.device, &allocateInfo, this->descriptorSets.data()) !=
+          this->backend->device, &allocateInfo, this->descriptorSets.data()) !=
       VK_SUCCESS) {
     throw std::runtime_error("Failed to allocate descriptor set");
   }

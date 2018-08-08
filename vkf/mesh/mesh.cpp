@@ -1,5 +1,5 @@
 #include "mesh.hpp"
-#include "buffer_transfer.hpp"
+#include "../helper/buffer_transfer.hpp"
 #include <stb_image.h>
 
 using namespace vkf;
@@ -53,7 +53,7 @@ Mesh::Mesh(
   stagingAllocInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
   if (vmaCreateBuffer(
-          this->backend.allocator,
+          this->backend->allocator,
           &stagingBufferCreateInfo,
           &stagingAllocInfo,
           &stagingBuffer,
@@ -91,7 +91,7 @@ Mesh::Mesh(
   imageAllocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
   vmaCreateImage(
-      this->backend.allocator,
+      this->backend->allocator,
       &imageCreateInfo,
       &imageAllocCreateInfo,
       &this->image,
@@ -123,7 +123,7 @@ Mesh::Mesh(
   };
 
   if (vkCreateImageView(
-          this->backend.device,
+          this->backend->device,
           &imageViewCreateInfo,
           nullptr,
           &this->imageView)) {
@@ -152,7 +152,7 @@ Mesh::Mesh(
   };
 
   if (vkCreateSampler(
-          this->backend.device, &samplerCreateInfo, nullptr, &this->sampler) !=
+          this->backend->device, &samplerCreateInfo, nullptr, &this->sampler) !=
       VK_SUCCESS) {
     throw std::runtime_error("Failed to create sampler");
   }
@@ -160,7 +160,7 @@ Mesh::Mesh(
   {
     void *stagingMemoryPointer;
     if (vmaMapMemory(
-            this->backend.allocator,
+            this->backend->allocator,
             stagingAllocation,
             &stagingMemoryPointer) != VK_SUCCESS) {
       throw std::runtime_error("Failed to map image memory");
@@ -168,7 +168,7 @@ Mesh::Mesh(
 
     memcpy(stagingMemoryPointer, imageData, imageSize);
 
-    vmaUnmapMemory(this->backend.allocator, stagingAllocation);
+    vmaUnmapMemory(this->backend->allocator, stagingAllocation);
 
     transferImage(
         this->backend,
@@ -198,7 +198,7 @@ Mesh::Mesh(
   vertexAllocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
   if (vmaCreateBuffer(
-          this->backend.allocator,
+          this->backend->allocator,
           &vertexBufferCreateInfo,
           &vertexAllocCreateInfo,
           &this->vertexBuffer,
@@ -208,10 +208,10 @@ Mesh::Mesh(
   }
 
   void *memoryPointer;
-  vmaMapMemory(backend.allocator, stagingAllocation, &memoryPointer);
+  vmaMapMemory(backend->allocator, stagingAllocation, &memoryPointer);
   memcpy(
       memoryPointer, vertices.data(), vertices.size() * sizeof(StandardVertex));
-  vmaUnmapMemory(backend.allocator, stagingAllocation);
+  vmaUnmapMemory(backend->allocator, stagingAllocation);
 
   transferBuffer(
       this->backend,
@@ -237,7 +237,7 @@ Mesh::Mesh(
   indexAllocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
   if (vmaCreateBuffer(
-          this->backend.allocator,
+          this->backend->allocator,
           &indexBufferCreateInfo,
           &indexAllocCreateInfo,
           &this->indexBuffer,
@@ -246,9 +246,9 @@ Mesh::Mesh(
     throw std::runtime_error("Failed to create index buffer");
   }
 
-  vmaMapMemory(backend.allocator, stagingAllocation, &memoryPointer);
+  vmaMapMemory(backend->allocator, stagingAllocation, &memoryPointer);
   memcpy(memoryPointer, indices.data(), indices.size() * sizeof(uint32_t));
-  vmaUnmapMemory(backend.allocator, stagingAllocation);
+  vmaUnmapMemory(backend->allocator, stagingAllocation);
 
   transferBuffer(
       this->backend,
@@ -256,7 +256,7 @@ Mesh::Mesh(
       indexBuffer,
       indices.size() * sizeof(uint32_t));
 
-  vmaDestroyBuffer(this->backend.allocator, stagingBuffer, stagingAllocation);
+  vmaDestroyBuffer(this->backend->allocator, stagingBuffer, stagingAllocation);
 
   this->descriptorSetIndex = this->material->getAvailableDescriptorSet();
   if (descriptorSetIndex == -1) {
@@ -283,27 +283,27 @@ Mesh::Mesh(
       .pTexelBufferView = nullptr,
   };
 
-  vkUpdateDescriptorSets(this->backend.device, 1, &descriptorWrite, 0, nullptr);
+  vkUpdateDescriptorSets(this->backend->device, 1, &descriptorWrite, 0, nullptr);
 }
 
 Mesh::~Mesh() {
-  vkQueueWaitIdle(this->backend.graphicsQueue);
+  vkQueueWaitIdle(this->backend->graphicsQueue);
 
   if (this->imageView != VK_NULL_HANDLE) {
-    vkDestroyImageView(this->backend.device, this->imageView, nullptr);
+    vkDestroyImageView(this->backend->device, this->imageView, nullptr);
     this->imageView = VK_NULL_HANDLE;
   }
 
   if (this->sampler != VK_NULL_HANDLE) {
-    vkDestroySampler(this->backend.device, this->sampler, nullptr);
+    vkDestroySampler(this->backend->device, this->sampler, nullptr);
     this->sampler = VK_NULL_HANDLE;
   }
 
-  vmaDestroyImage(this->backend.allocator, this->image, this->imageAllocation);
+  vmaDestroyImage(this->backend->allocator, this->image, this->imageAllocation);
   vmaDestroyBuffer(
-      this->backend.allocator, this->vertexBuffer, this->vertexAllocation);
+      this->backend->allocator, this->vertexBuffer, this->vertexAllocation);
   vmaDestroyBuffer(
-      this->backend.allocator, this->indexBuffer, this->indexAllocation);
+      this->backend->allocator, this->indexBuffer, this->indexAllocation);
 
   this->material->descriptorSetAvailable[descriptorSetIndex] = false;
 }

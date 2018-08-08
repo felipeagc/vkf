@@ -3,7 +3,7 @@
 using namespace vkf;
 
 void vkf::transferImage(
-    VulkanBackend &backend,
+    VulkanBackend *backend,
     VkBuffer fromBuffer,
     VkImage image,
     uint32_t width,
@@ -15,7 +15,7 @@ void vkf::transferImage(
       .pInheritanceInfo = nullptr,
   };
 
-  VkCommandBuffer commandBuffer = backend.graphicsCommandBuffers[0];
+  VkCommandBuffer commandBuffer = backend->graphicsCommandBuffers[0];
 
   vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
 
@@ -123,16 +123,16 @@ void vkf::transferImage(
       .pSignalSemaphores = nullptr,
   };
 
-  if (vkQueueSubmit(backend.graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) !=
+  if (vkQueueSubmit(backend->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) !=
       VK_SUCCESS) {
     throw std::runtime_error("Failed to submit command buffer to queue");
   }
 
-  vkQueueWaitIdle(backend.graphicsQueue);
+  vkQueueWaitIdle(backend->graphicsQueue);
 }
 
 void vkf::transferBuffer(
-    VulkanBackend &backend,
+    VulkanBackend *backend,
     VkBuffer fromBuffer,
     VkBuffer toBuffer,
     size_t size) {
@@ -144,7 +144,7 @@ void vkf::transferBuffer(
   };
 
   vkBeginCommandBuffer(
-      backend.graphicsCommandBuffers[0], &commandBufferBeginInfo);
+      backend->graphicsCommandBuffers[0], &commandBufferBeginInfo);
 
   VkBufferCopy bufferCopyInfo = {
       .srcOffset = 0,
@@ -153,7 +153,7 @@ void vkf::transferBuffer(
   };
 
   vkCmdCopyBuffer(
-      backend.graphicsCommandBuffers[0],
+      backend->graphicsCommandBuffers[0],
       fromBuffer,
       toBuffer,
       1,
@@ -172,7 +172,7 @@ void vkf::transferBuffer(
   };
 
   vkCmdPipelineBarrier(
-      backend.graphicsCommandBuffers[0],
+      backend->graphicsCommandBuffers[0],
       VK_PIPELINE_STAGE_TRANSFER_BIT,
       VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
       0,
@@ -183,7 +183,7 @@ void vkf::transferBuffer(
       0,
       nullptr);
 
-  vkEndCommandBuffer(backend.graphicsCommandBuffers[0]);
+  vkEndCommandBuffer(backend->graphicsCommandBuffers[0]);
 
   VkSubmitInfo submitInfo = {
       .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -192,15 +192,15 @@ void vkf::transferBuffer(
       .pWaitSemaphores = nullptr,
       .pWaitDstStageMask = nullptr,
       .commandBufferCount = 1,
-      .pCommandBuffers = &backend.graphicsCommandBuffers[0],
+      .pCommandBuffers = &backend->graphicsCommandBuffers[0],
       .signalSemaphoreCount = 0,
       .pSignalSemaphores = nullptr,
   };
 
-  if (vkQueueSubmit(backend.graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) !=
+  if (vkQueueSubmit(backend->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) !=
       VK_SUCCESS) {
     throw std::runtime_error("Failed to submit command buffer to queue");
   }
 
-  vkQueueWaitIdle(backend.graphicsQueue);
+  vkQueueWaitIdle(backend->graphicsQueue);
 }

@@ -1,4 +1,5 @@
 #include "vulkan_backend.hpp"
+#include "../window/window.hpp"
 #include <cstring>
 
 using namespace vkf;
@@ -18,24 +19,20 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
   return VK_FALSE;
 }
 
-VulkanBackend::VulkanBackend(
-    SDL_Window *window, std::vector<const char *> sdlExtensions) {
+VulkanBackend::VulkanBackend(Window &window) {
 
-  this->createInstance(sdlExtensions);
+  this->createInstance(window.getVulkanExtensions());
 #ifndef NDEBUG
   this->setupDebugCallback();
 #endif
-  this->createSurface(window);
+  window.createVulkanSurface(this->instance, &this->surface);
   this->createDevice();
   this->getDeviceQueues();
   this->setupMemoryAllocator();
 
   this->createSyncObjects();
 
-  int width, height;
-  SDL_GetWindowSize(window, &width, &height);
-  this->createSwapchain(
-      static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+  this->createSwapchain(window.getWidth(), window.getHeight());
   this->createSwapchainImageViews();
 
   this->createGraphicsCommandPool();
@@ -376,12 +373,14 @@ VkPresentModeKHR VulkanBackend::getSwapchainPresentMode(
     const std::vector<VkPresentModeKHR> &presentModes) {
   for (const auto &presentMode : presentModes) {
     if (presentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
+      std::cout << "MAILBOX" << std::endl;
       return presentMode;
     }
   }
 
   for (const auto &presentMode : presentModes) {
     if (presentMode == VK_PRESENT_MODE_FIFO_KHR) {
+      std::cout << "FIFO" << std::endl;
       return presentMode;
     }
   }
@@ -469,12 +468,6 @@ void VulkanBackend::setupDebugCallback() {
       VK_SUCCESS) {
 
     throw std::runtime_error("Failed to setup debug callback");
-  }
-}
-
-void VulkanBackend::createSurface(SDL_Window *window) {
-  if (!SDL_Vulkan_CreateSurface(window, this->instance, &surface)) {
-    throw std::runtime_error("Failed to create window surface");
   }
 }
 

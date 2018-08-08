@@ -1,7 +1,7 @@
 #pragma once
 
-#include "vertex.hpp"
-#include "vulkan_backend.hpp"
+#include "../mesh/vertex.hpp"
+#include "../renderer/vulkan_backend.hpp"
 
 namespace vkf {
 const uint32_t MAX_DESCRIPTOR_SETS = 4096;
@@ -11,7 +11,7 @@ class Material {
 
 public:
   Material(
-      VulkanBackend &backend,
+      VulkanBackend *backend,
       VkShaderModule vertexShaderModule,
       VkShaderModule fragmentShaderModule)
       : backend(backend),
@@ -30,7 +30,7 @@ public:
   virtual int getAvailableDescriptorSet() = 0;
 
 protected:
-  VulkanBackend &backend;
+  VulkanBackend *backend;
 
   VkShaderModule vertexShaderModule{VK_NULL_HANDLE};
   VkShaderModule fragmentShaderModule{VK_NULL_HANDLE};

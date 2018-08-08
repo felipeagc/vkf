@@ -5,10 +5,12 @@
 #include <functional>
 #include <iostream>
 #include <vector>
-#include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
+#include <vulkan/vulkan.h>
 
 namespace vkf {
+
+class Window;
 
 #ifdef NDEBUG
 const std::vector<const char *> REQUIRED_VALIDATION_LAYERS = {};
@@ -28,7 +30,7 @@ typedef std::function<void(VkCommandBuffer commandBuffer)> DrawFunction;
 
 class VulkanBackend {
 public:
-  VulkanBackend(SDL_Window *window, std::vector<const char *> sdlExtensions);
+  VulkanBackend(Window &window);
   ~VulkanBackend();
 
   // private:
@@ -101,9 +103,6 @@ public:
 
   // Sets up the debug callback for the validation layers
   void setupDebugCallback();
-
-  // Creates the window surface
-  void createSurface(SDL_Window *window);
 
   // Creates physical and logical devices
   void createDevice();

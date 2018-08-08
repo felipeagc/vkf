@@ -1,8 +1,8 @@
 #pragma once
 
-#include "standard_material.hpp"
+#include "../material/standard_material.hpp"
 #include "vertex.hpp"
-#include "vulkan_backend.hpp"
+#include "../renderer/vulkan_backend.hpp"
 #include <stb_image.h>
 
 namespace vkf {
@@ -18,7 +18,7 @@ public:
   void draw(VkCommandBuffer commandBuffer);
 
 protected:
-  VulkanBackend &backend;
+  VulkanBackend *backend;
   StandardMaterial *material;
 
   int descriptorSetIndex = -1;
