@@ -1,39 +1,38 @@
 #pragma once
 
+#include "../buffer/index_buffer.hpp"
+#include "../buffer/vertex_buffer.hpp"
 #include "../material/standard_material.hpp"
+#include "../texture/texture.hpp"
 #include "vertex.hpp"
-#include "../renderer/vulkan_backend.hpp"
 #include <stb_image.h>
+#include <vk_mem_alloc.h>
 
 namespace vkf {
+class Framework;
 class Mesh {
 public:
   Mesh(
       StandardMaterial *material,
       std::vector<StandardVertex> vertices,
-      std::vector<uint32_t> indices);
-
-  virtual ~Mesh();
+      std::vector<uint32_t> indices,
+      const char *texturePath);
+  ~Mesh();
 
   void draw(VkCommandBuffer commandBuffer);
 
 protected:
-  VulkanBackend *backend;
+  Framework *framework;
   StandardMaterial *material;
 
   int descriptorSetIndex = -1;
 
   std::vector<StandardVertex> vertices;
-  VkBuffer vertexBuffer{VK_NULL_HANDLE};
-  VmaAllocation vertexAllocation{VK_NULL_HANDLE};
+  VertexBuffer vertexBuffer;
 
   std::vector<uint32_t> indices;
-  VkBuffer indexBuffer{VK_NULL_HANDLE};
-  VmaAllocation indexAllocation{VK_NULL_HANDLE};
+  IndexBuffer indexBuffer;
 
-  VkImage image{VK_NULL_HANDLE};
-  VkImageView imageView{VK_NULL_HANDLE};
-  VkSampler sampler{VK_NULL_HANDLE};
-  VmaAllocation imageAllocation{VK_NULL_HANDLE};
+  Texture texture;
 };
 } // namespace vkf

@@ -28,10 +28,12 @@ const int MAX_FRAMES_IN_FLIGHT = 2;
 
 typedef std::function<void(VkCommandBuffer commandBuffer)> DrawFunction;
 
-class VulkanBackend {
+class VkContext {
 public:
-  VulkanBackend(Window &window);
-  ~VulkanBackend();
+  VkContext(Window &window);
+  VkContext(const VkContext &) = delete;
+  VkContext &operator=(const VkContext &) = delete;
+  ~VkContext();
 
   // private:
   VkInstance instance{VK_NULL_HANDLE};

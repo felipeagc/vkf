@@ -1,25 +1,27 @@
 #pragma once
 
 #include "../mesh/vertex.hpp"
-#include "../renderer/vulkan_backend.hpp"
+#include <array>
 
 namespace vkf {
 const uint32_t MAX_DESCRIPTOR_SETS = 4096;
+
+class Framework;
 
 class Material {
   friend class Mesh;
 
 public:
   Material(
-      VulkanBackend *backend,
+      Framework *framework,
       VkShaderModule vertexShaderModule,
       VkShaderModule fragmentShaderModule)
-      : backend(backend),
+      : framework(framework),
         vertexShaderModule(vertexShaderModule),
         fragmentShaderModule(fragmentShaderModule) {
   }
 
-  virtual ~Material() {};
+  virtual ~Material(){};
 
   virtual void bindPipeline(VkCommandBuffer commandBuffer) = 0;
 
@@ -30,7 +32,7 @@ public:
   virtual int getAvailableDescriptorSet() = 0;
 
 protected:
-  VulkanBackend *backend;
+  Framework *framework;
 
   VkShaderModule vertexShaderModule{VK_NULL_HANDLE};
   VkShaderModule fragmentShaderModule{VK_NULL_HANDLE};

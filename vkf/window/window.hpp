@@ -11,6 +11,8 @@ class Window {
 
 public:
   Window(const char *title, int width, int height);
+  Window(const Window&) = delete;
+  Window& operator=(const Window&) = delete;
   ~Window();
 
   uint32_t getWidth() const;

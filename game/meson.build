@@ -3,7 +3,6 @@ game_sources = [
 ]
 
 game_dependencies = [
-  dependency('sdl2'),
   vkf_dep
 ]
 

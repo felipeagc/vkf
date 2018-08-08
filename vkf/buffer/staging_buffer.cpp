@@ -1,13 +1,67 @@
-#include "buffer_transfer.hpp"
+#include "staging_buffer.hpp"
+#include "../framework/framework.hpp"
 
 using namespace vkf;
 
-void vkf::transferImage(
-    VulkanBackend *backend,
-    VkBuffer fromBuffer,
-    VkImage image,
-    uint32_t width,
-    uint32_t height) {
+StagingBuffer::StagingBuffer(Framework *framework, size_t size)
+    : Buffer(framework) {
+  VkBufferCreateInfo bufferCreateInfo = {
+      .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = 0,
+      .size = size,
+      .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+      .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+      .queueFamilyIndexCount = 0,
+      .pQueueFamilyIndices = nullptr,
+  };
+
+  VmaAllocationCreateInfo allocInfo = {};
+  allocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+  allocInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+  if (vmaCreateBuffer(
+          this->framework->getContext()->allocator,
+          &bufferCreateInfo,
+          &allocInfo,
+          &this->buffer,
+          &this->allocation,
+          nullptr) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create staging buffer");
+  }
+}
+
+void StagingBuffer::copyMemory(void *data, size_t size) {
+  void *stagingMemoryPointer;
+  if (vmaMapMemory(
+          this->framework->getContext()->allocator,
+          this->allocation,
+          &stagingMemoryPointer) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to map image memory");
+  }
+
+  memcpy(stagingMemoryPointer, data, size);
+
+  vmaUnmapMemory(this->framework->getContext()->allocator, this->allocation);
+}
+
+void StagingBuffer::transfer(VertexBuffer &buffer, size_t size) {
+  this->innerBufferTransfer(
+      buffer,
+      size,
+      VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT,
+      VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
+}
+
+void StagingBuffer::transfer(IndexBuffer &buffer, size_t size) {
+  this->innerBufferTransfer(
+      buffer,
+      size,
+      VK_ACCESS_INDEX_READ_BIT,
+      VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
+}
+
+void StagingBuffer::transfer(Texture &texture) {
   VkCommandBufferBeginInfo commandBufferBeginInfo = {
       .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
       .pNext = nullptr,
@@ -15,7 +69,8 @@ void vkf::transferImage(
       .pInheritanceInfo = nullptr,
   };
 
-  VkCommandBuffer commandBuffer = backend->graphicsCommandBuffers[0];
+  VkCommandBuffer commandBuffer =
+      framework->getContext()->graphicsCommandBuffers[0];
 
   vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo);
 
@@ -36,7 +91,7 @@ void vkf::transferImage(
       .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
       .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
       .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-      .image = image,
+      .image = texture.getImageHandle(),
       .subresourceRange = imageSubresourceRange,
   };
 
@@ -71,16 +126,16 @@ void vkf::transferImage(
           },
       .imageExtent =
           {
-              .width = width,
-              .height = height,
+              .width = texture.getWidth(),
+              .height = texture.getHeight(),
               .depth = 1,
           },
   };
 
   vkCmdCopyBufferToImage(
       commandBuffer,
-      fromBuffer,
-      image,
+      this->buffer,
+      texture.getImageHandle(),
       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
       1,
       &bufferImageCopyInfo);
@@ -94,7 +149,7 @@ void vkf::transferImage(
       .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
       .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
       .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-      .image = image,
+      .image = texture.getImageHandle(),
       .subresourceRange = imageSubresourceRange,
   };
 
@@ -123,19 +178,22 @@ void vkf::transferImage(
       .pSignalSemaphores = nullptr,
   };
 
-  if (vkQueueSubmit(backend->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) !=
-      VK_SUCCESS) {
+  if (vkQueueSubmit(
+          framework->getContext()->graphicsQueue,
+          1,
+          &submitInfo,
+          VK_NULL_HANDLE) != VK_SUCCESS) {
     throw std::runtime_error("Failed to submit command buffer to queue");
   }
 
-  vkQueueWaitIdle(backend->graphicsQueue);
+  vkQueueWaitIdle(framework->getContext()->graphicsQueue);
 }
 
-void vkf::transferBuffer(
-    VulkanBackend *backend,
-    VkBuffer fromBuffer,
-    VkBuffer toBuffer,
-    size_t size) {
+void StagingBuffer::innerBufferTransfer(
+    Buffer &buffer,
+    size_t size,
+    VkAccessFlags dstAccessMask,
+    VkPipelineStageFlags dstStageMask) {
   VkCommandBufferBeginInfo commandBufferBeginInfo = {
       .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
       .pNext = nullptr,
@@ -144,7 +202,8 @@ void vkf::transferBuffer(
   };
 
   vkBeginCommandBuffer(
-      backend->graphicsCommandBuffers[0], &commandBufferBeginInfo);
+      framework->getContext()->graphicsCommandBuffers[0],
+      &commandBufferBeginInfo);
 
   VkBufferCopy bufferCopyInfo = {
       .srcOffset = 0,
@@ -153,9 +212,9 @@ void vkf::transferBuffer(
   };
 
   vkCmdCopyBuffer(
-      backend->graphicsCommandBuffers[0],
-      fromBuffer,
-      toBuffer,
+      framework->getContext()->graphicsCommandBuffers[0],
+      this->buffer,
+      buffer.getHandle(),
       1,
       &bufferCopyInfo);
 
@@ -163,18 +222,18 @@ void vkf::transferBuffer(
       .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
       .pNext = nullptr,
       .srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT,
-      .dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT,
+      .dstAccessMask = dstAccessMask,
       .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
       .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-      .buffer = toBuffer,
+      .buffer = buffer.getHandle(),
       .offset = 0,
       .size = VK_WHOLE_SIZE,
   };
 
   vkCmdPipelineBarrier(
-      backend->graphicsCommandBuffers[0],
+      framework->getContext()->graphicsCommandBuffers[0],
       VK_PIPELINE_STAGE_TRANSFER_BIT,
-      VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+      dstStageMask,
       0,
       0,
       nullptr,
@@ -183,7 +242,7 @@ void vkf::transferBuffer(
       0,
       nullptr);
 
-  vkEndCommandBuffer(backend->graphicsCommandBuffers[0]);
+  vkEndCommandBuffer(framework->getContext()->graphicsCommandBuffers[0]);
 
   VkSubmitInfo submitInfo = {
       .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -192,15 +251,18 @@ void vkf::transferBuffer(
       .pWaitSemaphores = nullptr,
       .pWaitDstStageMask = nullptr,
       .commandBufferCount = 1,
-      .pCommandBuffers = &backend->graphicsCommandBuffers[0],
+      .pCommandBuffers = &framework->getContext()->graphicsCommandBuffers[0],
       .signalSemaphoreCount = 0,
       .pSignalSemaphores = nullptr,
   };
 
-  if (vkQueueSubmit(backend->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) !=
-      VK_SUCCESS) {
+  if (vkQueueSubmit(
+          framework->getContext()->graphicsQueue,
+          1,
+          &submitInfo,
+          VK_NULL_HANDLE) != VK_SUCCESS) {
     throw std::runtime_error("Failed to submit command buffer to queue");
   }
 
-  vkQueueWaitIdle(backend->graphicsQueue);
+  vkQueueWaitIdle(framework->getContext()->graphicsQueue);
 }

@@ -1,8 +1,7 @@
 #pragma once
 
-#include "material.hpp"
 #include "../mesh/vertex.hpp"
-#include "../renderer/vulkan_backend.hpp"
+#include "material.hpp"
 #include <glm/glm.hpp>
 #include <vector>
 #include <vulkan/vulkan.h>
@@ -10,7 +9,7 @@
 namespace vkf {
 class StandardMaterial : public Material {
 public:
-  StandardMaterial(VulkanBackend *backend);
+  StandardMaterial(Framework *framework);
   virtual ~StandardMaterial();
 
   void bindPipeline(VkCommandBuffer commandBuffer) override;

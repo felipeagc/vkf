@@ -1,4 +1,4 @@
-#include "vulkan_backend.hpp"
+#include "vk_context.hpp"
 #include "../window/window.hpp"
 #include <cstring>
 
@@ -19,7 +19,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
   return VK_FALSE;
 }
 
-VulkanBackend::VulkanBackend(Window &window) {
+VkContext::VkContext(Window &window) {
 
   this->createInstance(window.getVulkanExtensions());
 #ifndef NDEBUG
@@ -41,7 +41,7 @@ VulkanBackend::VulkanBackend(Window &window) {
   this->createRenderPass();
 }
 
-VulkanBackend::~VulkanBackend() {
+VkContext::~VkContext() {
   if (this->device != VK_NULL_HANDLE) {
     vkDeviceWaitIdle(this->device);
 
@@ -106,7 +106,7 @@ VulkanBackend::~VulkanBackend() {
   }
 }
 
-bool VulkanBackend::checkValidationLayerSupport() {
+bool VkContext::checkValidationLayerSupport() {
   uint32_t layerCount;
   vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
@@ -132,7 +132,7 @@ bool VulkanBackend::checkValidationLayerSupport() {
 }
 
 std::vector<const char *>
-VulkanBackend::getRequiredExtensions(std::vector<const char *> sdlExtensions) {
+VkContext::getRequiredExtensions(std::vector<const char *> sdlExtensions) {
   std::vector<const char *> extensions{sdlExtensions};
 
 #ifndef NDEBUG
@@ -142,7 +142,7 @@ VulkanBackend::getRequiredExtensions(std::vector<const char *> sdlExtensions) {
   return extensions;
 }
 
-bool VulkanBackend::checkPhysicalDeviceProperties(
+bool VkContext::checkPhysicalDeviceProperties(
     VkPhysicalDevice physicalDevice,
     uint32_t *selectedGraphicsQueueFamilyIndex,
     uint32_t *selectedPresentQueueFamilyIndex) {
@@ -256,7 +256,7 @@ bool VulkanBackend::checkPhysicalDeviceProperties(
   return true;
 }
 
-uint32_t VulkanBackend::getSwapchainNumImages(
+uint32_t VkContext::getSwapchainNumImages(
     const VkSurfaceCapabilitiesKHR &surfaceCapabilities) {
   uint32_t imageCount = surfaceCapabilities.minImageCount + 1;
 
@@ -268,7 +268,7 @@ uint32_t VulkanBackend::getSwapchainNumImages(
   return imageCount;
 }
 
-VkSurfaceFormatKHR VulkanBackend::getSwapchainFormat(
+VkSurfaceFormatKHR VkContext::getSwapchainFormat(
     const std::vector<VkSurfaceFormatKHR> &formats) {
   if (formats.size() == 1 && formats[0].format == VK_FORMAT_UNDEFINED) {
     return {VK_FORMAT_R8G8B8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR};
@@ -283,7 +283,7 @@ VkSurfaceFormatKHR VulkanBackend::getSwapchainFormat(
   return formats[0];
 }
 
-VkExtent2D VulkanBackend::getSwapchainExtent(
+VkExtent2D VkContext::getSwapchainExtent(
     uint32_t width,
     uint32_t height,
     const VkSurfaceCapabilitiesKHR &surfaceCapabilities) {
@@ -311,7 +311,7 @@ VkExtent2D VulkanBackend::getSwapchainExtent(
   return surfaceCapabilities.currentExtent;
 }
 
-VkImageUsageFlags VulkanBackend::getSwapchainUsageFlags(
+VkImageUsageFlags VkContext::getSwapchainUsageFlags(
     const VkSurfaceCapabilitiesKHR &surfaceCapabilities) {
   if (surfaceCapabilities.supportedUsageFlags &
       VK_IMAGE_USAGE_TRANSFER_DST_BIT) {
@@ -359,7 +359,7 @@ VkImageUsageFlags VulkanBackend::getSwapchainUsageFlags(
   return static_cast<VkImageUsageFlags>(-1);
 }
 
-VkSurfaceTransformFlagBitsKHR VulkanBackend::getSwapchainTransform(
+VkSurfaceTransformFlagBitsKHR VkContext::getSwapchainTransform(
     const VkSurfaceCapabilitiesKHR &surfaceCapabilities) {
   if (surfaceCapabilities.supportedTransforms &
       VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) {
@@ -369,18 +369,16 @@ VkSurfaceTransformFlagBitsKHR VulkanBackend::getSwapchainTransform(
   }
 }
 
-VkPresentModeKHR VulkanBackend::getSwapchainPresentMode(
+VkPresentModeKHR VkContext::getSwapchainPresentMode(
     const std::vector<VkPresentModeKHR> &presentModes) {
   for (const auto &presentMode : presentModes) {
     if (presentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
-      std::cout << "MAILBOX" << std::endl;
       return presentMode;
     }
   }
 
   for (const auto &presentMode : presentModes) {
     if (presentMode == VK_PRESENT_MODE_FIFO_KHR) {
-      std::cout << "FIFO" << std::endl;
       return presentMode;
     }
   }
@@ -391,7 +389,7 @@ VkPresentModeKHR VulkanBackend::getSwapchainPresentMode(
   return static_cast<VkPresentModeKHR>(-1);
 }
 
-VkShaderModule VulkanBackend::createShaderModule(std::vector<char> code) {
+VkShaderModule VkContext::createShaderModule(std::vector<char> code) {
   if (code.size() == 0) {
     throw std::runtime_error("Shader code loaded with size 0");
   }
@@ -414,7 +412,7 @@ VkShaderModule VulkanBackend::createShaderModule(std::vector<char> code) {
   return shaderModule;
 }
 
-void VulkanBackend::createInstance(std::vector<const char *> sdlExtensions) {
+void VkContext::createInstance(std::vector<const char *> sdlExtensions) {
 #ifndef NDEBUG
   if (!checkValidationLayerSupport()) {
     throw std::runtime_error("Validation layers requested, but not available");
@@ -456,7 +454,7 @@ void VulkanBackend::createInstance(std::vector<const char *> sdlExtensions) {
   }
 }
 
-void VulkanBackend::setupDebugCallback() {
+void VkContext::setupDebugCallback() {
   VkDebugReportCallbackCreateInfoEXT createInfo = {
       .sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
       .flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT,
@@ -471,7 +469,7 @@ void VulkanBackend::setupDebugCallback() {
   }
 }
 
-void VulkanBackend::createDevice() {
+void VkContext::createDevice() {
   uint32_t deviceCount = 0;
   if (vkEnumeratePhysicalDevices(this->instance, &deviceCount, nullptr) !=
           VK_SUCCESS ||
@@ -560,14 +558,14 @@ void VulkanBackend::createDevice() {
   this->presentQueueFamilyIndex = selectedPresentQueueFamilyIndex;
 }
 
-void VulkanBackend::getDeviceQueues() {
+void VkContext::getDeviceQueues() {
   vkGetDeviceQueue(
       this->device, this->graphicsQueueFamilyIndex, 0, &this->graphicsQueue);
   vkGetDeviceQueue(
       this->device, this->presentQueueFamilyIndex, 0, &this->presentQueue);
 }
 
-void VulkanBackend::setupMemoryAllocator() {
+void VkContext::setupMemoryAllocator() {
   VmaAllocatorCreateInfo allocatorInfo = {
       .physicalDevice = this->physicalDevice,
       .device = this->device,
@@ -576,7 +574,7 @@ void VulkanBackend::setupMemoryAllocator() {
   vmaCreateAllocator(&allocatorInfo, &this->allocator);
 }
 
-void VulkanBackend::createSyncObjects() {
+void VkContext::createSyncObjects() {
   VkSemaphoreCreateInfo semaphoreCreateInfo = {
       .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
       .pNext = nullptr,
@@ -608,7 +606,7 @@ void VulkanBackend::createSyncObjects() {
   }
 }
 
-void VulkanBackend::createSwapchain(uint32_t width, uint32_t height) {
+void VkContext::createSwapchain(uint32_t width, uint32_t height) {
   for (const auto &imageView : this->swapchainImageViews) {
     if (imageView != VK_NULL_HANDLE) {
       vkDestroyImageView(this->device, imageView, nullptr);
@@ -713,7 +711,7 @@ void VulkanBackend::createSwapchain(uint32_t width, uint32_t height) {
       device, this->swapchain, &imageCount, this->swapchainImages.data());
 }
 
-void VulkanBackend::createSwapchainImageViews() {
+void VkContext::createSwapchainImageViews() {
   this->swapchainImageViews.resize(this->swapchainImages.size());
 
   for (size_t i = 0; i < swapchainImages.size(); i++) {
@@ -751,7 +749,7 @@ void VulkanBackend::createSwapchainImageViews() {
   }
 }
 
-void VulkanBackend::createGraphicsCommandPool() {
+void VkContext::createGraphicsCommandPool() {
   VkCommandPoolCreateInfo cmdPoolCreateInfo = {
       .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
       .pNext = nullptr,
@@ -769,7 +767,7 @@ void VulkanBackend::createGraphicsCommandPool() {
   }
 }
 
-void VulkanBackend::allocateGraphicsCommandBuffers() {
+void VkContext::allocateGraphicsCommandBuffers() {
   VkCommandBufferAllocateInfo allocateInfo = {
       .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
       .pNext = nullptr,
@@ -786,7 +784,7 @@ void VulkanBackend::allocateGraphicsCommandBuffers() {
   }
 }
 
-void VulkanBackend::createRenderPass() {
+void VkContext::createRenderPass() {
   VkAttachmentDescription attachmentDescriptions[] = {
       {
           .flags = 0,
@@ -861,7 +859,7 @@ void VulkanBackend::createRenderPass() {
   }
 }
 
-void VulkanBackend::regenFramebuffer(
+void VkContext::regenFramebuffer(
     VkFramebuffer &framebuffer, VkImageView imageView) {
   if (framebuffer != VK_NULL_HANDLE) {
     vkDestroyFramebuffer(this->device, framebuffer, nullptr);
@@ -886,7 +884,7 @@ void VulkanBackend::regenFramebuffer(
   }
 }
 
-void VulkanBackend::destroyResizables() {
+void VkContext::destroyResizables() {
   if (this->device != VK_NULL_HANDLE) {
     vkDeviceWaitIdle(this->device);
 
@@ -906,7 +904,7 @@ void VulkanBackend::destroyResizables() {
   }
 }
 
-void VulkanBackend::onResize(uint32_t width, uint32_t height) {
+void VkContext::onResize(uint32_t width, uint32_t height) {
   if (this->device != VK_NULL_HANDLE) {
     vkDeviceWaitIdle(this->device);
   }
@@ -919,7 +917,7 @@ void VulkanBackend::onResize(uint32_t width, uint32_t height) {
   this->allocateGraphicsCommandBuffers();
 }
 
-void VulkanBackend::present(
+void VkContext::present(
     uint32_t width, uint32_t height, DrawFunction drawFunction) {
   if (vkWaitForFences(
           this->device,
