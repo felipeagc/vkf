@@ -14,6 +14,7 @@ vkf_sources = [
 
   'texture/texture.cpp',
 
+  'material/material.cpp',
   'material/standard_material.cpp',
 
   'mesh/mesh.cpp',

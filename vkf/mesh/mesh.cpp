@@ -6,13 +6,13 @@ using namespace vkf;
 
 Mesh::Mesh(
     StandardMaterial *material,
-    std::vector<StandardVertex> vertices,
+    std::vector<Vertex> vertices,
     std::vector<uint32_t> indices,
     const char *texturePath)
     : framework(material->framework),
       material(material),
       vertices(vertices),
-      vertexBuffer(framework, vertices.size() * sizeof(StandardVertex)),
+      vertexBuffer(framework, vertices.size() * sizeof(Vertex)),
       indices(indices),
       indexBuffer(framework, indices.size() * sizeof(uint32_t)) {
   StagingBuffer *stagingBuffer = this->framework->getStagingBuffer();
@@ -20,10 +20,10 @@ Mesh::Mesh(
   // Vertices
   {
     stagingBuffer->copyMemory(
-        vertices.data(), vertices.size() * sizeof(StandardVertex));
+        vertices.data(), vertices.size() * sizeof(Vertex));
 
     stagingBuffer->transfer(
-        vertexBuffer, vertices.size() * sizeof(StandardVertex));
+        vertexBuffer, vertices.size() * sizeof(Vertex));
   }
 
   // Indices
@@ -49,7 +49,7 @@ Mesh::Mesh(
 
   // Descriptor set
   {
-    // TODO: more elegant way of allocating descriptor sets (queue maybe?)
+    // TODO: more elegant way of reserving descriptor sets (queue maybe?)
     this->descriptorSetIndex = this->material->getAvailableDescriptorSet();
     if (descriptorSetIndex == -1) {
       throw std::runtime_error("Failed to find available descriptor set");
@@ -76,7 +76,7 @@ Mesh::Mesh(
     };
 
     vkUpdateDescriptorSets(
-        this->framework->getContext()->device, 1, &descriptorWrite, 0, nullptr);
+        this->framework->getContext()->getDevice(), 1, &descriptorWrite, 0, nullptr);
   }
 }
 

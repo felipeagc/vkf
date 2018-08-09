@@ -3,7 +3,7 @@
 using namespace vkf;
 
 Framework::Framework(const char *title, int width, int height)
-    : window(title, width, height), context(window) {
+    : window(title, width, height), context(&window) {
 }
 
 Framework::~Framework() {

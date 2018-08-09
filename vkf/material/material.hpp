@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../mesh/vertex.hpp"
+#include "../window/window.hpp"
 #include <array>
 
 namespace vkf {
@@ -8,28 +9,24 @@ const uint32_t MAX_DESCRIPTOR_SETS = 4096;
 
 class Framework;
 
-class Material {
+class Material : public EventListener {
   friend class Mesh;
 
 public:
   Material(
       Framework *framework,
       VkShaderModule vertexShaderModule,
-      VkShaderModule fragmentShaderModule)
-      : framework(framework),
-        vertexShaderModule(vertexShaderModule),
-        fragmentShaderModule(fragmentShaderModule) {
-  }
+      VkShaderModule fragmentShaderModule);
 
   virtual ~Material(){};
 
-  virtual void bindPipeline(VkCommandBuffer commandBuffer) = 0;
+  void bindPipeline(VkCommandBuffer commandBuffer);
 
-  virtual void onResize(uint32_t width, uint32_t height) = 0;
+  void onResize(uint32_t width, uint32_t height) override;
 
   // Returns the index of the first available descriptor set
   // Returns -1 if not found
-  virtual int getAvailableDescriptorSet() = 0;
+  int getAvailableDescriptorSet();
 
 protected:
   Framework *framework;

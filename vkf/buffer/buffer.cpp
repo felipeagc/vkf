@@ -8,11 +8,11 @@ VkBuffer Buffer::getHandle() {
 }
 
 void Buffer::destroy() {
-  if (this->framework->getContext()->device != VK_NULL_HANDLE) {
-    vkDeviceWaitIdle(this->framework->getContext()->device);
+  if (this->framework->getContext()->getDevice() != VK_NULL_HANDLE) {
+    vkDeviceWaitIdle(this->framework->getContext()->getDevice());
 
     vmaDestroyBuffer(
-        this->framework->getContext()->allocator,
+        this->framework->getContext()->getAllocator(),
         this->buffer,
         this->allocation);
   }

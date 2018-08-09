@@ -36,7 +36,7 @@ Texture::Texture(Framework *framework, uint32_t width, uint32_t height)
   imageAllocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
   vmaCreateImage(
-      this->framework->getContext()->allocator,
+      this->framework->getContext()->getAllocator(),
       &imageCreateInfo,
       &imageAllocCreateInfo,
       &this->image,
@@ -68,7 +68,7 @@ Texture::Texture(Framework *framework, uint32_t width, uint32_t height)
   };
 
   if (vkCreateImageView(
-          this->framework->getContext()->device,
+          this->framework->getContext()->getDevice(),
           &imageViewCreateInfo,
           nullptr,
           &this->imageView)) {
@@ -97,7 +97,7 @@ Texture::Texture(Framework *framework, uint32_t width, uint32_t height)
   };
 
   if (vkCreateSampler(
-          this->framework->getContext()->device,
+          this->framework->getContext()->getDevice(),
           &samplerCreateInfo,
           nullptr,
           &this->sampler) != VK_SUCCESS) {
@@ -106,24 +106,24 @@ Texture::Texture(Framework *framework, uint32_t width, uint32_t height)
 }
 
 void Texture::destroy() {
-  if (this->framework->getContext()->device != VK_NULL_HANDLE) {
-    vkDeviceWaitIdle(this->framework->getContext()->device);
+  if (this->framework->getContext()->getDevice() != VK_NULL_HANDLE) {
+    vkDeviceWaitIdle(this->framework->getContext()->getDevice());
 
     if (this->sampler != VK_NULL_HANDLE) {
       vkDestroySampler(
-          this->framework->getContext()->device, this->sampler, nullptr);
+          this->framework->getContext()->getDevice(), this->sampler, nullptr);
       this->sampler = VK_NULL_HANDLE;
     }
 
     if (this->imageView != VK_NULL_HANDLE) {
       vkDestroyImageView(
-          this->framework->getContext()->device, this->imageView, nullptr);
+          this->framework->getContext()->getDevice(), this->imageView, nullptr);
       this->imageView = VK_NULL_HANDLE;
     }
 
     if (this->image != VK_NULL_HANDLE) {
       vmaDestroyImage(
-          this->framework->getContext()->allocator,
+          this->framework->getContext()->getAllocator(),
           this->image,
           this->imageAllocation);
     }

@@ -21,7 +21,7 @@ VertexBuffer::VertexBuffer(Framework *framework, size_t size)
   allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
   if (vmaCreateBuffer(
-          this->framework->getContext()->allocator,
+          this->framework->getContext()->getAllocator(),
           &bufferCreateInfo,
           &allocInfo,
           &this->buffer,

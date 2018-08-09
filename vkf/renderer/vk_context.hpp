@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../window/window.hpp"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>
 #include <functional>
@@ -9,8 +10,6 @@
 #include <vulkan/vulkan.h>
 
 namespace vkf {
-
-class Window;
 
 #ifdef NDEBUG
 const std::vector<const char *> REQUIRED_VALIDATION_LAYERS = {};
@@ -28,14 +27,29 @@ const int MAX_FRAMES_IN_FLIGHT = 2;
 
 typedef std::function<void(VkCommandBuffer commandBuffer)> DrawFunction;
 
-class VkContext {
+class VkContext : public EventListener {
 public:
-  VkContext(Window &window);
+  VkContext(Window *window);
   VkContext(const VkContext &) = delete;
   VkContext &operator=(const VkContext &) = delete;
   ~VkContext();
 
-  // private:
+  VmaAllocator getAllocator();
+  VkDevice getDevice();
+  VkRenderPass getRenderPass();
+  VkQueue getGraphicsQueue();
+
+  void useTransientCommandBuffer(std::function<void(VkCommandBuffer)> function);
+  VkShaderModule createShaderModule(std::vector<char> code);
+
+  void present(DrawFunction drawFunction);
+
+  // EventHandler
+  virtual void onResize(uint32_t width, uint32_t height) override;
+
+private:
+  Window *window{nullptr};
+
   VkInstance instance{VK_NULL_HANDLE};
   VkDebugReportCallbackEXT callback{VK_NULL_HANDLE};
   VkPhysicalDevice physicalDevice{VK_NULL_HANDLE};
@@ -48,23 +62,28 @@ public:
   VkQueue graphicsQueue{VK_NULL_HANDLE};
   VkQueue presentQueue{VK_NULL_HANDLE};
 
-  std::vector<VkSemaphore> imageAvailableSemaphores{MAX_FRAMES_IN_FLIGHT};
-  std::vector<VkSemaphore> renderingFinishedSemaphores{MAX_FRAMES_IN_FLIGHT};
-  std::vector<VkFence> inFlightFences{MAX_FRAMES_IN_FLIGHT};
-
   VkSurfaceKHR surface{VK_NULL_HANDLE};
 
-  VkSwapchainKHR swapchain = {VK_NULL_HANDLE};
+  VkSwapchainKHR swapchain{VK_NULL_HANDLE};
   VkFormat swapchainImageFormat;
   VkExtent2D swapchainExtent;
   std::vector<VkImage> swapchainImages;
   std::vector<VkImageView> swapchainImageViews;
 
   VkRenderPass renderPass;
-  std::vector<VkFramebuffer> framebuffers{MAX_FRAMES_IN_FLIGHT};
 
   VkCommandPool graphicsCommandPool{VK_NULL_HANDLE};
-  std::vector<VkCommandBuffer> graphicsCommandBuffers{MAX_FRAMES_IN_FLIGHT};
+  VkCommandPool transientCommandPool{VK_NULL_HANDLE};
+
+  struct FrameResources {
+    VkSemaphore imageAvailableSemaphore{VK_NULL_HANDLE};
+    VkSemaphore renderingFinishedSemaphore{VK_NULL_HANDLE};
+    VkFence fence{VK_NULL_HANDLE};
+    VkFramebuffer framebuffer{VK_NULL_HANDLE};
+    VkCommandBuffer commandBuffer{VK_NULL_HANDLE};
+  };
+
+  std::vector<FrameResources> frameResources{MAX_FRAMES_IN_FLIGHT};
 
   int currentFrame = 0;
 
@@ -96,8 +115,6 @@ public:
   VkPresentModeKHR
   getSwapchainPresentMode(const std::vector<VkPresentModeKHR> &presentModes);
 
-  VkShaderModule createShaderModule(std::vector<char> code);
-
   // Intialization functions
 
   // Creates the vulkan instance
@@ -127,6 +144,9 @@ public:
   // Creates the graphics command pool
   void createGraphicsCommandPool();
 
+  // Creates the transient command pool
+  void createTransientCommandPool();
+
   // Allocates the graphics command buffers used for drawing operations
   void allocateGraphicsCommandBuffers();
 
@@ -136,14 +156,8 @@ public:
   // Deletes (if it exists) and recreates a framebuffer
   void regenFramebuffer(VkFramebuffer &framebuffer, VkImageView imageView);
 
-  // Resizing
-
+  // Destroys the resources that need to be destroyed when resizing the window
   void destroyResizables();
-  void onResize(uint32_t width, uint32_t height);
-
-  // Drawing functions
-
-  void present(uint32_t width, uint32_t height, DrawFunction drawFunction);
 };
 } // namespace vkf
 

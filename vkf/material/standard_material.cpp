@@ -41,30 +41,34 @@ StandardMaterial::StandardMaterial(Framework *framework)
 }
 
 StandardMaterial::~StandardMaterial() {
-  if (this->framework->getContext()->device != VK_NULL_HANDLE) {
-    vkDeviceWaitIdle(this->framework->getContext()->device);
+  if (this->framework->getContext()->getDevice() != VK_NULL_HANDLE) {
+    vkDeviceWaitIdle(this->framework->getContext()->getDevice());
 
     if (this->pipelineLayout != VK_NULL_HANDLE) {
       vkDestroyPipelineLayout(
-          this->framework->getContext()->device, this->pipelineLayout, nullptr);
+          this->framework->getContext()->getDevice(),
+          this->pipelineLayout,
+          nullptr);
       this->pipelineLayout = VK_NULL_HANDLE;
     }
 
     if (this->pipeline != VK_NULL_HANDLE) {
       vkDestroyPipeline(
-          this->framework->getContext()->device, this->pipeline, nullptr);
+          this->framework->getContext()->getDevice(), this->pipeline, nullptr);
       this->pipeline = VK_NULL_HANDLE;
     }
 
     if (this->descriptorPool != VK_NULL_HANDLE) {
       vkDestroyDescriptorPool(
-          this->framework->getContext()->device, this->descriptorPool, nullptr);
+          this->framework->getContext()->getDevice(),
+          this->descriptorPool,
+          nullptr);
       this->descriptorPool = VK_NULL_HANDLE;
     }
 
     if (this->descriptorSetLayout != VK_NULL_HANDLE) {
       vkDestroyDescriptorSetLayout(
-          this->framework->getContext()->device,
+          this->framework->getContext()->getDevice(),
           this->descriptorSetLayout,
           nullptr);
       this->descriptorSetLayout = VK_NULL_HANDLE;
@@ -72,7 +76,7 @@ StandardMaterial::~StandardMaterial() {
 
     if (this->vertexShaderModule != VK_NULL_HANDLE) {
       vkDestroyShaderModule(
-          this->framework->getContext()->device,
+          this->framework->getContext()->getDevice(),
           this->vertexShaderModule,
           nullptr);
       this->vertexShaderModule = VK_NULL_HANDLE;
@@ -80,47 +84,12 @@ StandardMaterial::~StandardMaterial() {
 
     if (this->fragmentShaderModule != VK_NULL_HANDLE) {
       vkDestroyShaderModule(
-          this->framework->getContext()->device,
+          this->framework->getContext()->getDevice(),
           this->fragmentShaderModule,
           nullptr);
       this->fragmentShaderModule = VK_NULL_HANDLE;
     }
   }
-}
-
-void StandardMaterial::bindPipeline(VkCommandBuffer commandBuffer) {
-  vkCmdBindPipeline(
-      commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline);
-}
-
-void StandardMaterial::onResize(uint32_t width, uint32_t height) {
-  if (this->framework->getContext()->device != VK_NULL_HANDLE) {
-    vkDeviceWaitIdle(this->framework->getContext()->device);
-
-    if (this->pipelineLayout != VK_NULL_HANDLE) {
-      vkDestroyPipelineLayout(
-          this->framework->getContext()->device, this->pipelineLayout, nullptr);
-      this->pipelineLayout = VK_NULL_HANDLE;
-    }
-
-    if (this->pipeline != VK_NULL_HANDLE) {
-      vkDestroyPipeline(
-          this->framework->getContext()->device, this->pipeline, nullptr);
-      this->pipeline = VK_NULL_HANDLE;
-    }
-  }
-
-  this->createPipelineLayout();
-  this->createPipeline();
-}
-
-int StandardMaterial::getAvailableDescriptorSet() {
-  for (size_t i = 0; i < this->descriptorSetAvailable.size(); ++i) {
-    if (this->descriptorSetAvailable[i]) {
-      return i;
-    }
-  }
-  return -1;
 }
 
 VkPipelineLayout StandardMaterial::createPipelineLayout() {
@@ -136,7 +105,7 @@ VkPipelineLayout StandardMaterial::createPipelineLayout() {
 
   VkPipelineLayout pipelineLayout;
   if (vkCreatePipelineLayout(
-          this->framework->getContext()->device,
+          this->framework->getContext()->getDevice(),
           &layoutCreateInfo,
           nullptr,
           &pipelineLayout) != VK_SUCCESS) {
@@ -171,14 +140,13 @@ void StandardMaterial::createPipeline() {
   std::vector<VkVertexInputBindingDescription> vertexBindingDescriptions = {
       {
           .binding = 0,
-          .stride = sizeof(StandardVertex),
+          .stride = sizeof(Vertex),
           .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
       },
   };
 
-  auto vertexAttributeDescriptions =
-      StandardVertex::getVertexAttributeDescriptions(
-          vertexBindingDescriptions[0].binding);
+  auto vertexAttributeDescriptions = Vertex::getVertexAttributeDescriptions(
+      vertexBindingDescriptions[0].binding);
 
   VkPipelineVertexInputStateCreateInfo vertexInputStateCreateInfo = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
@@ -291,21 +259,23 @@ void StandardMaterial::createPipeline() {
       .pColorBlendState = &colorBlendStateCreateInfo,
       .pDynamicState = &dynamicStateCreateInfo,
       .layout = this->pipelineLayout,
-      .renderPass = this->framework->getContext()->renderPass,
+      .renderPass = this->framework->getContext()->getRenderPass(),
       .subpass = 0,
       .basePipelineHandle = VK_NULL_HANDLE,
       .basePipelineIndex = -1,
   };
 
   if (vkCreateGraphicsPipelines(
-          this->framework->getContext()->device,
+          this->framework->getContext()->getDevice(),
           VK_NULL_HANDLE,
           1,
           &pipelineCreateInfo,
           nullptr,
           &this->pipeline) != VK_SUCCESS) {
     vkDestroyPipelineLayout(
-        this->framework->getContext()->device, this->pipelineLayout, nullptr);
+        this->framework->getContext()->getDevice(),
+        this->pipelineLayout,
+        nullptr);
     throw std::runtime_error("Failed to create graphics pipeline");
   }
 }
@@ -328,7 +298,7 @@ void StandardMaterial::createDescriptorSetLayout() {
   };
 
   if (vkCreateDescriptorSetLayout(
-          this->framework->getContext()->device,
+          this->framework->getContext()->getDevice(),
           &descriptorSetLayoutCreateInfo,
           nullptr,
           &this->descriptorSetLayout) != VK_SUCCESS) {
@@ -352,7 +322,7 @@ void StandardMaterial::createDescriptorPool() {
   };
 
   if (vkCreateDescriptorPool(
-          this->framework->getContext()->device,
+          this->framework->getContext()->getDevice(),
           &descriptorPoolCreateInfo,
           nullptr,
           &this->descriptorPool) != VK_SUCCESS) {
@@ -375,7 +345,7 @@ void StandardMaterial::allocateDescriptorSets() {
   };
 
   if (vkAllocateDescriptorSets(
-          this->framework->getContext()->device,
+          this->framework->getContext()->getDevice(),
           &allocateInfo,
           this->descriptorSets.data()) != VK_SUCCESS) {
     throw std::runtime_error("Failed to allocate descriptor set");

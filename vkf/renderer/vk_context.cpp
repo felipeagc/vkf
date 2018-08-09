@@ -19,26 +19,28 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
   return VK_FALSE;
 }
 
-VkContext::VkContext(Window &window) {
-
-  this->createInstance(window.getVulkanExtensions());
+VkContext::VkContext(Window *window) : window(window) {
+  this->createInstance(window->getVulkanExtensions());
 #ifndef NDEBUG
   this->setupDebugCallback();
 #endif
-  window.createVulkanSurface(this->instance, &this->surface);
+  window->createVulkanSurface(this->instance, &this->surface);
   this->createDevice();
   this->getDeviceQueues();
   this->setupMemoryAllocator();
 
   this->createSyncObjects();
 
-  this->createSwapchain(window.getWidth(), window.getHeight());
+  this->createSwapchain(window->getWidth(), window->getHeight());
   this->createSwapchainImageViews();
 
   this->createGraphicsCommandPool();
+  this->createTransientCommandPool();
   this->allocateGraphicsCommandBuffers();
 
   this->createRenderPass();
+
+  this->window->addListener(this);
 }
 
 VkContext::~VkContext() {
@@ -47,14 +49,33 @@ VkContext::~VkContext() {
 
     this->destroyResizables();
 
+    if (this->transientCommandPool != VK_NULL_HANDLE) {
+      vkDestroyCommandPool(this->device, this->transientCommandPool, nullptr);
+      this->transientCommandPool = VK_NULL_HANDLE;
+    }
+
     if (this->graphicsCommandPool != VK_NULL_HANDLE) {
       vkDestroyCommandPool(this->device, this->graphicsCommandPool, nullptr);
       this->graphicsCommandPool = VK_NULL_HANDLE;
     }
 
-    for (const auto &framebuffer : this->framebuffers) {
-      if (framebuffer != VK_NULL_HANDLE) {
-        vkDestroyFramebuffer(this->device, framebuffer, nullptr);
+    for (const auto &resources : this->frameResources) {
+      if (resources.framebuffer != VK_NULL_HANDLE) {
+        vkDestroyFramebuffer(this->device, resources.framebuffer, nullptr);
+      }
+
+      if (resources.fence != VK_NULL_HANDLE) {
+        vkDestroyFence(this->device, resources.fence, nullptr);
+      }
+
+      if (resources.renderingFinishedSemaphore != VK_NULL_HANDLE) {
+        vkDestroySemaphore(
+            this->device, resources.renderingFinishedSemaphore, nullptr);
+      }
+
+      if (resources.imageAvailableSemaphore != VK_NULL_HANDLE) {
+        vkDestroySemaphore(
+            this->device, resources.imageAvailableSemaphore, nullptr);
       }
     }
 
@@ -66,22 +87,6 @@ VkContext::~VkContext() {
 
     if (this->swapchain != VK_NULL_HANDLE) {
       vkDestroySwapchainKHR(this->device, this->swapchain, nullptr);
-    }
-
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-      if (this->inFlightFences[i] != VK_NULL_HANDLE) {
-        vkDestroyFence(this->device, this->inFlightFences[i], nullptr);
-      }
-
-      if (this->renderingFinishedSemaphores[i] != VK_NULL_HANDLE) {
-        vkDestroySemaphore(
-            this->device, this->renderingFinishedSemaphores[i], nullptr);
-      }
-
-      if (this->imageAvailableSemaphores[i] != VK_NULL_HANDLE) {
-        vkDestroySemaphore(
-            this->device, this->imageAvailableSemaphores[i], nullptr);
-      }
     }
 
     if (this->allocator != VK_NULL_HANDLE) {
@@ -104,6 +109,45 @@ VkContext::~VkContext() {
   if (this->instance != VK_NULL_HANDLE) {
     vkDestroyInstance(this->instance, nullptr);
   }
+}
+
+VmaAllocator VkContext::getAllocator() {
+  return this->allocator;
+}
+
+VkDevice VkContext::getDevice() {
+  return this->device;
+}
+
+VkRenderPass VkContext::getRenderPass() {
+  return this->renderPass;
+}
+
+VkQueue VkContext::getGraphicsQueue() {
+  return this->graphicsQueue;
+}
+
+void VkContext::useTransientCommandBuffer(
+    std::function<void(VkCommandBuffer)> function) {
+  VkCommandBuffer commandBuffer{VK_NULL_HANDLE};
+
+  VkCommandBufferAllocateInfo allocateInfo = {
+      .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+      .pNext = nullptr,
+      .commandPool = this->transientCommandPool,
+      .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+      .commandBufferCount = 1,
+  };
+
+  if (vkAllocateCommandBuffers(this->device, &allocateInfo, &commandBuffer) !=
+      VK_SUCCESS) {
+    throw std::runtime_error("Failed to allocate transient command buffer");
+  }
+
+  function(commandBuffer);
+
+  vkFreeCommandBuffers(
+      this->device, this->transientCommandPool, 1, &commandBuffer);
 }
 
 bool VkContext::checkValidationLayerSupport() {
@@ -268,8 +312,8 @@ uint32_t VkContext::getSwapchainNumImages(
   return imageCount;
 }
 
-VkSurfaceFormatKHR VkContext::getSwapchainFormat(
-    const std::vector<VkSurfaceFormatKHR> &formats) {
+VkSurfaceFormatKHR
+VkContext::getSwapchainFormat(const std::vector<VkSurfaceFormatKHR> &formats) {
   if (formats.size() == 1 && formats[0].format == VK_FORMAT_UNDEFINED) {
     return {VK_FORMAT_R8G8B8A8_UNORM, VK_COLORSPACE_SRGB_NONLINEAR_KHR};
   }
@@ -587,19 +631,19 @@ void VkContext::createSyncObjects() {
       .flags = VK_FENCE_CREATE_SIGNALED_BIT,
   };
 
-  for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+  for (auto &resources : this->frameResources) {
     if ((vkCreateSemaphore(
              this->device,
              &semaphoreCreateInfo,
              nullptr,
-             &this->imageAvailableSemaphores[i]) != VK_SUCCESS) ||
+             &resources.imageAvailableSemaphore) != VK_SUCCESS) ||
         (vkCreateSemaphore(
              this->device,
              &semaphoreCreateInfo,
              nullptr,
-             &this->renderingFinishedSemaphores[i]) != VK_SUCCESS) ||
+             &resources.renderingFinishedSemaphore) != VK_SUCCESS) ||
         (vkCreateFence(
-             this->device, &fenceCreateInfo, nullptr, &inFlightFences[i]) !=
+             this->device, &fenceCreateInfo, nullptr, &resources.fence) !=
          VK_SUCCESS)) {
       throw std::runtime_error("Failed to create semaphores");
     }
@@ -753,8 +797,7 @@ void VkContext::createGraphicsCommandPool() {
   VkCommandPoolCreateInfo cmdPoolCreateInfo = {
       .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
       .pNext = nullptr,
-      .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT |
-               VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
+      .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
       .queueFamilyIndex = this->graphicsQueueFamilyIndex,
   };
 
@@ -763,24 +806,43 @@ void VkContext::createGraphicsCommandPool() {
           &cmdPoolCreateInfo,
           nullptr,
           &this->graphicsCommandPool) != VK_SUCCESS) {
-    throw std::runtime_error("Failed to create command pool");
+    throw std::runtime_error("Failed to create graphics command pool");
+  }
+}
+
+void VkContext::createTransientCommandPool() {
+  VkCommandPoolCreateInfo cmdPoolCreateInfo = {
+      .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
+      .queueFamilyIndex = this->graphicsQueueFamilyIndex,
+  };
+
+  if (vkCreateCommandPool(
+          this->device,
+          &cmdPoolCreateInfo,
+          nullptr,
+          &this->transientCommandPool) != VK_SUCCESS) {
+    throw std::runtime_error("Failed to create transient command pool");
   }
 }
 
 void VkContext::allocateGraphicsCommandBuffers() {
-  VkCommandBufferAllocateInfo allocateInfo = {
-      .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-      .pNext = nullptr,
-      .commandPool = this->graphicsCommandPool,
-      .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-      .commandBufferCount =
-          static_cast<uint32_t>(this->graphicsCommandBuffers.size()),
-  };
+  for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+    VkCommandBufferAllocateInfo allocateInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .pNext = nullptr,
+        .commandPool = this->graphicsCommandPool,
+        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        .commandBufferCount = 1,
+    };
 
-  if (vkAllocateCommandBuffers(
-          this->device, &allocateInfo, this->graphicsCommandBuffers.data()) !=
-      VK_SUCCESS) {
-    throw std::runtime_error("Failed to allocate command buffers");
+    if (vkAllocateCommandBuffers(
+            this->device,
+            &allocateInfo,
+            &this->frameResources[i].commandBuffer) != VK_SUCCESS) {
+      throw std::runtime_error("Failed to allocate command buffers");
+    }
   }
 }
 
@@ -888,13 +950,14 @@ void VkContext::destroyResizables() {
   if (this->device != VK_NULL_HANDLE) {
     vkDeviceWaitIdle(this->device);
 
-    if ((this->graphicsCommandBuffers.size() > 0) &&
-        (this->graphicsCommandBuffers[0] != VK_NULL_HANDLE)) {
-      vkFreeCommandBuffers(
-          this->device,
-          this->graphicsCommandPool,
-          static_cast<uint32_t>(graphicsCommandBuffers.size()),
-          this->graphicsCommandBuffers.data());
+    for (auto &resources : this->frameResources) {
+      if (resources.commandBuffer != VK_NULL_HANDLE) {
+        vkFreeCommandBuffers(
+            this->device,
+            this->graphicsCommandPool,
+            1,
+            &resources.commandBuffer);
+      }
     }
 
     if (this->renderPass != VK_NULL_HANDLE) {
@@ -911,31 +974,31 @@ void VkContext::onResize(uint32_t width, uint32_t height) {
 
   this->destroyResizables();
 
-  this->createSwapchain(width, height);
+  this->createSwapchain(this->window->getWidth(), this->window->getHeight());
   this->createSwapchainImageViews();
   this->createRenderPass();
   this->allocateGraphicsCommandBuffers();
 }
 
-void VkContext::present(
-    uint32_t width, uint32_t height, DrawFunction drawFunction) {
+void VkContext::present(DrawFunction drawFunction) {
   if (vkWaitForFences(
           this->device,
           1,
-          &this->inFlightFences[this->currentFrame],
+          &this->frameResources[this->currentFrame].fence,
           VK_TRUE,
           UINT64_MAX) != VK_SUCCESS) {
     throw std::runtime_error("Waiting for fence took too long");
   }
 
-  vkResetFences(this->device, 1, &this->inFlightFences[this->currentFrame]);
+  vkResetFences(
+      this->device, 1, &this->frameResources[this->currentFrame].fence);
 
   uint32_t imageIndex;
   VkResult result = vkAcquireNextImageKHR(
       this->device,
       this->swapchain,
       UINT64_MAX,
-      this->imageAvailableSemaphores[this->currentFrame],
+      this->frameResources[this->currentFrame].imageAvailableSemaphore,
       VK_NULL_HANDLE,
       &imageIndex);
 
@@ -944,7 +1007,7 @@ void VkContext::present(
   case VK_SUBOPTIMAL_KHR:
     break;
   case VK_ERROR_OUT_OF_DATE_KHR:
-    this->onResize(width, height);
+    this->onResize(this->window->getWidth(), this->window->getHeight());
     return;
   default:
     throw std::runtime_error(
@@ -961,7 +1024,7 @@ void VkContext::present(
 
   {
     this->regenFramebuffer(
-        this->framebuffers[this->currentFrame],
+        this->frameResources[this->currentFrame].framebuffer,
         this->swapchainImageViews[imageIndex]);
 
     VkCommandBufferBeginInfo beginInfo = {
@@ -972,7 +1035,7 @@ void VkContext::present(
     };
 
     vkBeginCommandBuffer(
-        this->graphicsCommandBuffers[this->currentFrame], &beginInfo);
+        this->frameResources[this->currentFrame].commandBuffer, &beginInfo);
 
     if (this->presentQueue != this->graphicsQueue) {
       VkImageMemoryBarrier barrierFromPresentToDraw = {
@@ -989,7 +1052,7 @@ void VkContext::present(
       };
 
       vkCmdPipelineBarrier(
-          this->graphicsCommandBuffers[this->currentFrame],
+          this->frameResources[this->currentFrame].commandBuffer,
           VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
           VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
           0,
@@ -1007,14 +1070,14 @@ void VkContext::present(
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
         .pNext = nullptr,
         .renderPass = this->renderPass,
-        .framebuffer = this->framebuffers[this->currentFrame],
+        .framebuffer = this->frameResources[this->currentFrame].framebuffer,
         .renderArea = {{.x = 0, .y = 0}, this->swapchainExtent},
         .clearValueCount = 1,
         .pClearValues = &clearColor,
     };
 
     vkCmdBeginRenderPass(
-        this->graphicsCommandBuffers[this->currentFrame],
+        this->frameResources[this->currentFrame].commandBuffer,
         &renderPassBeginInfo,
         VK_SUBPASS_CONTENTS_INLINE);
 
@@ -1034,16 +1097,19 @@ void VkContext::present(
                      this->swapchainExtent};
 
     vkCmdSetViewport(
-        this->graphicsCommandBuffers[this->currentFrame], 0, 1, &viewport);
+        this->frameResources[this->currentFrame].commandBuffer,
+        0,
+        1,
+        &viewport);
     vkCmdSetScissor(
-        this->graphicsCommandBuffers[this->currentFrame], 0, 1, &scissor);
+        this->frameResources[this->currentFrame].commandBuffer, 0, 1, &scissor);
   }
 
   // Callback
-  drawFunction(this->graphicsCommandBuffers[this->currentFrame]);
+  drawFunction(this->frameResources[this->currentFrame].commandBuffer);
 
   {
-    vkCmdEndRenderPass(this->graphicsCommandBuffers[this->currentFrame]);
+    vkCmdEndRenderPass(this->frameResources[this->currentFrame].commandBuffer);
 
     if (this->presentQueue != this->graphicsQueue) {
       VkImageMemoryBarrier barrierFromDrawToPresent = {
@@ -1060,7 +1126,7 @@ void VkContext::present(
       };
 
       vkCmdPipelineBarrier(
-          this->graphicsCommandBuffers[this->currentFrame],
+          this->frameResources[this->currentFrame].commandBuffer,
           VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
           VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
           0,
@@ -1072,7 +1138,8 @@ void VkContext::present(
           &barrierFromDrawToPresent);
     }
 
-    if (vkEndCommandBuffer(this->graphicsCommandBuffers[this->currentFrame]) !=
+    if (vkEndCommandBuffer(
+            this->frameResources[this->currentFrame].commandBuffer) !=
         VK_SUCCESS) {
       throw std::runtime_error("Failed to record command buffers");
     }
@@ -1085,20 +1152,22 @@ void VkContext::present(
       .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
       .pNext = nullptr,
       .waitSemaphoreCount = 1,
-      .pWaitSemaphores = &this->imageAvailableSemaphores[this->currentFrame],
+      .pWaitSemaphores =
+          &this->frameResources[this->currentFrame].imageAvailableSemaphore,
       .pWaitDstStageMask = &waitDstStageMask,
       .commandBufferCount = 1,
-      .pCommandBuffers = &this->graphicsCommandBuffers[this->currentFrame],
+      .pCommandBuffers =
+          &this->frameResources[this->currentFrame].commandBuffer,
       .signalSemaphoreCount = 1,
       .pSignalSemaphores =
-          &this->renderingFinishedSemaphores[this->currentFrame],
+          &this->frameResources[this->currentFrame].renderingFinishedSemaphore,
   };
 
   if (vkQueueSubmit(
           this->graphicsQueue,
           1,
           &submitInfo,
-          this->inFlightFences[this->currentFrame]) != VK_SUCCESS) {
+          this->frameResources[this->currentFrame].fence) != VK_SUCCESS) {
     throw std::runtime_error(
         "Failed to submit to the command buffer to presentation queue");
   }
@@ -1107,7 +1176,8 @@ void VkContext::present(
       .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
       .pNext = nullptr,
       .waitSemaphoreCount = 1,
-      .pWaitSemaphores = &this->renderingFinishedSemaphores[this->currentFrame],
+      .pWaitSemaphores =
+          &this->frameResources[this->currentFrame].renderingFinishedSemaphore,
       .swapchainCount = 1,
       .pSwapchains = &this->swapchain,
       .pImageIndices = &imageIndex,
@@ -1121,7 +1191,7 @@ void VkContext::present(
     break;
   case VK_ERROR_OUT_OF_DATE_KHR:
   case VK_SUBOPTIMAL_KHR:
-    this->onResize(width, height);
+    this->onResize(this->window->getWidth(), this->window->getHeight());
     return;
   default:
     throw std::runtime_error("Failed to queue image presentation");

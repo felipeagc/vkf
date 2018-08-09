@@ -14,7 +14,7 @@ class Mesh {
 public:
   Mesh(
       StandardMaterial *material,
-      std::vector<StandardVertex> vertices,
+      std::vector<Vertex> vertices,
       std::vector<uint32_t> indices,
       const char *texturePath);
   ~Mesh();
@@ -27,7 +27,7 @@ protected:
 
   int descriptorSetIndex = -1;
 
-  std::vector<StandardVertex> vertices;
+  std::vector<Vertex> vertices;
   VertexBuffer vertexBuffer;
 
   std::vector<uint32_t> indices;

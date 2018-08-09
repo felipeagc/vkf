@@ -45,9 +45,11 @@ void Window::pollEvents() {
     case SDL_WINDOWEVENT:
       switch (event.window.type) {
       case SDL_WINDOWEVENT_RESIZED:
-        this->onResize(
-            static_cast<uint32_t>(event.window.data1),
-            static_cast<uint32_t>(event.window.data2));
+        for (EventListener *listener : eventListeners) {
+          listener->onResize(
+              static_cast<uint32_t>(event.window.data1),
+              static_cast<uint32_t>(event.window.data2));
+        }
         break;
       }
       break;
@@ -70,6 +72,11 @@ void Window::createVulkanSurface(VkInstance instance, VkSurfaceKHR *surface) {
   }
 }
 
-void Window::setOnResize(OnResizeCallback callback) {
-  this->onResize = callback;
+void Window::addListener(EventListener *eventListener) {
+  eventListener->window = this;
+  this->eventListeners.push_back(eventListener);
+}
+
+void Window::removeListener(EventListener *eventListener) {
+  this->eventListeners.remove(eventListener);
 }
