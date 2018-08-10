@@ -219,6 +219,18 @@ void StandardMaterial::createPipeline() {
       .alphaToOneEnable = VK_FALSE,
   };
 
+  VkPipelineDepthStencilStateCreateInfo depthStencilStateCreateInfo = {
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+      .pNext = nullptr,
+      .flags = 0,
+      .depthTestEnable = VK_TRUE,
+      .depthWriteEnable = VK_TRUE,
+      .depthCompareOp = VK_COMPARE_OP_LESS,
+      .depthBoundsTestEnable = VK_FALSE,
+      .stencilTestEnable = VK_FALSE,
+      // Ignore stencil stuff
+  };
+
   VkPipelineColorBlendAttachmentState colorBlendAttachmentState = {
       .blendEnable = VK_FALSE,
       .srcColorBlendFactor = VK_BLEND_FACTOR_ONE,
@@ -255,7 +267,7 @@ void StandardMaterial::createPipeline() {
       .pViewportState = &viewportStateCreateInfo,
       .pRasterizationState = &rasterizationStateCreateInfo,
       .pMultisampleState = &multisampleStateCreateInfo,
-      .pDepthStencilState = nullptr,
+      .pDepthStencilState = &depthStencilStateCreateInfo,
       .pColorBlendState = &colorBlendStateCreateInfo,
       .pDynamicState = &dynamicStateCreateInfo,
       .layout = this->pipelineLayout,

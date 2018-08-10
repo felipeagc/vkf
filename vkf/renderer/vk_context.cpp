@@ -38,6 +38,8 @@ VkContext::VkContext(Window *window) : window(window) {
   this->createTransientCommandPool();
   this->allocateGraphicsCommandBuffers();
 
+  this->createDepthResources();
+
   this->createRenderPass();
 
   this->window->addListener(this);
@@ -846,9 +848,83 @@ void VkContext::allocateGraphicsCommandBuffers() {
   }
 }
 
+void VkContext::createDepthResources() {
+  for (auto &resources : this->frameResources) {
+    this->depthImageFormat = VK_FORMAT_D16_UNORM; // TODO: change this?
+    VkImageCreateInfo imageCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .imageType = VK_IMAGE_TYPE_2D,
+        .format = this->depthImageFormat,
+        .extent =
+            {
+                .width = this->swapchainExtent.width,
+                .height = this->swapchainExtent.height,
+                .depth = 1,
+            },
+        .mipLevels = 1,
+        .arrayLayers = 1,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
+        .tiling = VK_IMAGE_TILING_OPTIMAL,
+        .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT |
+                 VK_IMAGE_USAGE_SAMPLED_BIT,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+        .queueFamilyIndexCount = 0,
+        .pQueueFamilyIndices = nullptr,
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+    };
+
+    VmaAllocationCreateInfo allocInfo = {};
+    allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+    if (vmaCreateImage(
+            this->allocator,
+            &imageCreateInfo,
+            &allocInfo,
+            &resources.depthImage,
+            &resources.depthImageAllocation,
+            nullptr) != VK_SUCCESS) {
+      throw std::runtime_error("Failed to create one of the depth images");
+    }
+
+    VkImageViewCreateInfo imageViewCreateInfo = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .image = resources.depthImage,
+        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .format = this->depthImageFormat,
+        .components =
+            {
+                VK_COMPONENT_SWIZZLE_IDENTITY, // r
+                VK_COMPONENT_SWIZZLE_IDENTITY, // g
+                VK_COMPONENT_SWIZZLE_IDENTITY, // b
+                VK_COMPONENT_SWIZZLE_IDENTITY, // a
+            },
+        .subresourceRange =
+            {
+                .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+    };
+
+    if (vkCreateImageView(
+            this->device,
+            &imageViewCreateInfo,
+            nullptr,
+            &resources.depthImageView) != VK_SUCCESS) {
+      throw std::runtime_error("Failed to create one of the depth image views");
+    }
+  }
+}
+
 void VkContext::createRenderPass() {
-  VkAttachmentDescription attachmentDescriptions[] = {
-      {
+  std::array<VkAttachmentDescription, 2> attachmentDescriptions{
+      VkAttachmentDescription{
           .flags = 0,
           .format = this->swapchainImageFormat,
           .samples = VK_SAMPLE_COUNT_1_BIT,
@@ -857,7 +933,19 @@ void VkContext::createRenderPass() {
           .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
           .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
           .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-          .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+          .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, // TODO: maybe change
+                                                          // this
+      },
+      VkAttachmentDescription{
+          .flags = 0,
+          .format = this->depthImageFormat,
+          .samples = VK_SAMPLE_COUNT_1_BIT,
+          .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+          .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+          .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+          .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+          .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+          .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
       },
   };
 
@@ -865,6 +953,13 @@ void VkContext::createRenderPass() {
       {
           .attachment = 0,
           .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+      },
+  };
+
+  VkAttachmentReference depthAttachmentReferences[] = {
+      {
+          .attachment = 1,
+          .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
       },
   };
 
@@ -876,29 +971,20 @@ void VkContext::createRenderPass() {
       .colorAttachmentCount = 1,
       .pColorAttachments = colorAttachmentReferences,
       .pResolveAttachments = nullptr,
-      .pDepthStencilAttachment = nullptr,
+      .pDepthStencilAttachment = depthAttachmentReferences,
       .preserveAttachmentCount = 0,
       .pPreserveAttachments = nullptr,
   }};
 
   std::vector<VkSubpassDependency> dependencies = {
       {
-          .srcSubpass = VK_SUBPASS_EXTERNAL,
-          .dstSubpass = 0,
-          .srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-          .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-          .srcAccessMask = VK_ACCESS_MEMORY_READ_BIT,
-          .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-          .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
-      },
-      {
           .srcSubpass = 0,
           .dstSubpass = VK_SUBPASS_EXTERNAL,
           .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-          .dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+          .dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
           .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-          .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
-          .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
+          .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+          .dependencyFlags = 0,
       },
   };
 
@@ -906,8 +992,8 @@ void VkContext::createRenderPass() {
       .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
       .pNext = nullptr,
       .flags = 0,
-      .attachmentCount = 1,
-      .pAttachments = attachmentDescriptions,
+      .attachmentCount = static_cast<uint32_t>(attachmentDescriptions.size()),
+      .pAttachments = attachmentDescriptions.data(),
       .subpassCount = 1,
       .pSubpasses = subpassDescriptions,
       .dependencyCount = static_cast<uint32_t>(dependencies.size()),
@@ -922,19 +1008,26 @@ void VkContext::createRenderPass() {
 }
 
 void VkContext::regenFramebuffer(
-    VkFramebuffer &framebuffer, VkImageView imageView) {
+    VkFramebuffer &framebuffer,
+    VkImageView colorImageView,
+    VkImageView depthImageView) {
   if (framebuffer != VK_NULL_HANDLE) {
     vkDestroyFramebuffer(this->device, framebuffer, nullptr);
     framebuffer = VK_NULL_HANDLE;
   }
+
+  std::array<VkImageView, 2> attachments{
+      colorImageView,
+      depthImageView,
+  };
 
   VkFramebufferCreateInfo createInfo = {
       .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
       .pNext = nullptr,
       .flags = 0,
       .renderPass = this->renderPass,
-      .attachmentCount = 1,
-      .pAttachments = &imageView,
+      .attachmentCount = static_cast<uint32_t>(attachments.size()),
+      .pAttachments = attachments.data(),
       .width = this->swapchainExtent.width,
       .height = this->swapchainExtent.height,
       .layers = 1,
@@ -958,6 +1051,17 @@ void VkContext::destroyResizables() {
             1,
             &resources.commandBuffer);
       }
+
+      if (resources.depthImage != VK_NULL_HANDLE) {
+        vkDestroyImageView(this->device, resources.depthImageView, nullptr);
+        vmaDestroyImage(
+            this->allocator,
+            resources.depthImage,
+            resources.depthImageAllocation);
+        resources.depthImage = VK_NULL_HANDLE;
+        resources.depthImageView = VK_NULL_HANDLE;
+        resources.depthImageAllocation = VK_NULL_HANDLE;
+      }
     }
 
     if (this->renderPass != VK_NULL_HANDLE) {
@@ -976,6 +1080,7 @@ void VkContext::onResize(uint32_t width, uint32_t height) {
 
   this->createSwapchain(this->window->getWidth(), this->window->getHeight());
   this->createSwapchainImageViews();
+  this->createDepthResources();
   this->createRenderPass();
   this->allocateGraphicsCommandBuffers();
 }
@@ -1025,7 +1130,8 @@ void VkContext::present(DrawFunction drawFunction) {
   {
     this->regenFramebuffer(
         this->frameResources[this->currentFrame].framebuffer,
-        this->swapchainImageViews[imageIndex]);
+        this->swapchainImageViews[imageIndex],
+        this->frameResources[this->currentFrame].depthImageView);
 
     VkCommandBufferBeginInfo beginInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -1064,7 +1170,10 @@ void VkContext::present(DrawFunction drawFunction) {
           &barrierFromPresentToDraw);
     }
 
-    VkClearValue clearColor{{{1.0f, 0.8f, 0.4f, 0.0f}}};
+    std::array<VkClearValue, 2> clearValues{
+        VkClearValue{{{1.0f, 0.8f, 0.4f, 0.0f}}},
+        VkClearValue{{{1.0f, 0.0f}}},
+    };
 
     VkRenderPassBeginInfo renderPassBeginInfo = {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -1072,8 +1181,8 @@ void VkContext::present(DrawFunction drawFunction) {
         .renderPass = this->renderPass,
         .framebuffer = this->frameResources[this->currentFrame].framebuffer,
         .renderArea = {{.x = 0, .y = 0}, this->swapchainExtent},
-        .clearValueCount = 1,
-        .pClearValues = &clearColor,
+        .clearValueCount = static_cast<uint32_t>(clearValues.size()),
+        .pClearValues = clearValues.data(),
     };
 
     vkCmdBeginRenderPass(

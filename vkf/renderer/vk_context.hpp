@@ -75,11 +75,18 @@ private:
   VkCommandPool graphicsCommandPool{VK_NULL_HANDLE};
   VkCommandPool transientCommandPool{VK_NULL_HANDLE};
 
+  VkFormat depthImageFormat;
   struct FrameResources {
+    VkImage depthImage;
+    VmaAllocation depthImageAllocation;
+    VkImageView depthImageView;
+
     VkSemaphore imageAvailableSemaphore{VK_NULL_HANDLE};
     VkSemaphore renderingFinishedSemaphore{VK_NULL_HANDLE};
     VkFence fence{VK_NULL_HANDLE};
+
     VkFramebuffer framebuffer{VK_NULL_HANDLE};
+
     VkCommandBuffer commandBuffer{VK_NULL_HANDLE};
   };
 
@@ -150,11 +157,17 @@ private:
   // Allocates the graphics command buffers used for drawing operations
   void allocateGraphicsCommandBuffers();
 
+  // Creates the depth images and image views
+  void createDepthResources();
+
   // Creates the renderpass
   void createRenderPass();
 
   // Deletes (if it exists) and recreates a framebuffer
-  void regenFramebuffer(VkFramebuffer &framebuffer, VkImageView imageView);
+  void regenFramebuffer(
+      VkFramebuffer &framebuffer,
+      VkImageView colorImageView,
+      VkImageView depthImageView);
 
   // Destroys the resources that need to be destroyed when resizing the window
   void destroyResizables();
