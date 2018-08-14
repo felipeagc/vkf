@@ -1,5 +1,6 @@
 #include "mesh.hpp"
 #include "../framework/framework.hpp"
+#include <glm/gtc/matrix_transform.hpp>
 #include <stb_image.h>
 
 using namespace vkf;
@@ -14,7 +15,8 @@ Mesh::Mesh(
       vertices(vertices),
       vertexBuffer(framework, vertices.size() * sizeof(Vertex)),
       indices(indices),
-      indexBuffer(framework, indices.size() * sizeof(uint32_t)) {
+      indexBuffer(framework, indices.size() * sizeof(uint32_t)),
+      uniformBuffer(framework, sizeof(UniformBufferObject)) {
   StagingBuffer *stagingBuffer = this->framework->getStagingBuffer();
 
   // Vertices
@@ -22,8 +24,7 @@ Mesh::Mesh(
     stagingBuffer->copyMemory(
         vertices.data(), vertices.size() * sizeof(Vertex));
 
-    stagingBuffer->transfer(
-        vertexBuffer, vertices.size() * sizeof(Vertex));
+    stagingBuffer->transfer(vertexBuffer, vertices.size() * sizeof(Vertex));
   }
 
   // Indices
@@ -32,6 +33,16 @@ Mesh::Mesh(
         indices.data(), indices.size() * sizeof(uint32_t));
 
     stagingBuffer->transfer(indexBuffer, indices.size() * sizeof(uint32_t));
+  }
+
+  // Get a descriptor set
+  {
+    // TODO: more elegant way of reserving descriptor sets (queue maybe?)
+    this->descriptorSetIndex = this->material->getAvailableDescriptorSet();
+    if (descriptorSetIndex == -1) {
+      throw std::runtime_error("Failed to find available descriptor set");
+    }
+    this->material->descriptorSetAvailable[descriptorSetIndex] = false;
   }
 
   // Texture
@@ -45,38 +56,8 @@ Mesh::Mesh(
     stagingBuffer->copyMemory(
         imageData.data(), imageData.size() * sizeof(unsigned char));
     stagingBuffer->transfer(texture);
-  }
 
-  // Descriptor set
-  {
-    // TODO: more elegant way of reserving descriptor sets (queue maybe?)
-    this->descriptorSetIndex = this->material->getAvailableDescriptorSet();
-    if (descriptorSetIndex == -1) {
-      throw std::runtime_error("Failed to find available descriptor set");
-    }
-    this->material->descriptorSetAvailable[descriptorSetIndex] = false;
-
-    VkDescriptorImageInfo imageInfo = {
-        .sampler = this->texture.getSamplerHandle(),
-        .imageView = this->texture.getImageViewHandle(),
-        .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-    };
-
-    VkWriteDescriptorSet descriptorWrite{
-        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-        .pNext = nullptr,
-        .dstSet = this->material->descriptorSets[descriptorSetIndex],
-        .dstBinding = 0,
-        .dstArrayElement = 0,
-        .descriptorCount = 1,
-        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .pImageInfo = &imageInfo,
-        .pBufferInfo = nullptr,
-        .pTexelBufferView = nullptr,
-    };
-
-    vkUpdateDescriptorSets(
-        this->framework->getContext()->getDevice(), 1, &descriptorWrite, 0, nullptr);
+    this->updateTextureDescriptor();
   }
 }
 
@@ -84,8 +65,73 @@ Mesh::~Mesh() {
   texture.destroy();
   indexBuffer.destroy();
   vertexBuffer.destroy();
+  uniformBuffer.destroy();
 
-  this->material->descriptorSetAvailable[descriptorSetIndex] = false;
+  this->material->descriptorSetAvailable[descriptorSetIndex] = true;
+}
+
+void Mesh::updateTextureDescriptor() {
+  // Update descriptor set
+  VkDescriptorImageInfo imageInfo = {
+      .sampler = this->texture.getSamplerHandle(),
+      .imageView = this->texture.getImageViewHandle(),
+      .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+  };
+
+  VkWriteDescriptorSet descriptorWrite{
+      .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+      .pNext = nullptr,
+      .dstSet = this->material->descriptorSets[descriptorSetIndex],
+      .dstBinding = 0,
+      .dstArrayElement = 0,
+      .descriptorCount = 1,
+      .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+      .pImageInfo = &imageInfo,
+      .pBufferInfo = nullptr,
+      .pTexelBufferView = nullptr,
+  };
+
+  vkUpdateDescriptorSets(
+      this->framework->getContext()->getDevice(),
+      1,
+      &descriptorWrite,
+      0,
+      nullptr);
+}
+
+void Mesh::updateUniformDescriptor(UniformBufferObject ubo) {
+  // Send UBO data
+  StagingBuffer *stagingBuffer = this->framework->getStagingBuffer();
+
+  stagingBuffer->copyMemory(&ubo, sizeof(ubo));
+  stagingBuffer->transfer(uniformBuffer, sizeof(ubo));
+
+  // Update descriptor set
+  VkDescriptorBufferInfo bufferInfo = {
+      .buffer = uniformBuffer.getHandle(),
+      .offset = 0,
+      .range = sizeof(UniformBufferObject),
+  };
+
+  VkWriteDescriptorSet descriptorWrite{
+      .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+      .pNext = nullptr,
+      .dstSet = this->material->descriptorSets[descriptorSetIndex],
+      .dstBinding = 1,
+      .dstArrayElement = 0,
+      .descriptorCount = 1,
+      .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+      .pImageInfo = nullptr,
+      .pBufferInfo = &bufferInfo,
+      .pTexelBufferView = nullptr,
+  };
+
+  vkUpdateDescriptorSets(
+      this->framework->getContext()->getDevice(),
+      1,
+      &descriptorWrite,
+      0,
+      nullptr);
 }
 
 void Mesh::draw(VkCommandBuffer commandBuffer) {

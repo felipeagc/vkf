@@ -31,6 +31,22 @@ uint32_t Window::getHeight() const {
   return static_cast<uint32_t>(height);
 }
 
+void Window::setRelativeMouse(bool relative) {
+  SDL_SetRelativeMouseMode(relative ? SDL_TRUE : SDL_FALSE);
+}
+
+bool Window::getRelativeMouse() {
+  return SDL_GetRelativeMouseMode();
+}
+
+void Window::getRelativeMousePos(int *x, int *y) {
+  SDL_GetRelativeMouseState(x, y);
+}
+
+double Window::getDelta() {
+  return static_cast<double>(this->deltaTime) / 1000.0f;
+}
+
 bool Window::getShouldClose() const {
   return this->shouldClose;
 }
@@ -55,6 +71,12 @@ void Window::pollEvents() {
       break;
     }
   }
+
+  auto currentTime = SDL_GetTicks();
+
+  this->deltaTime = currentTime - this->previousTime;
+
+  this->previousTime = currentTime;
 }
 
 std::vector<const char *> Window::getVulkanExtensions() {

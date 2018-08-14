@@ -293,20 +293,29 @@ void StandardMaterial::createPipeline() {
 }
 
 void StandardMaterial::createDescriptorSetLayout() {
-  VkDescriptorSetLayoutBinding layoutBinding = {
-      .binding = 0,
-      .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-      .descriptorCount = 1,
-      .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-      .pImmutableSamplers = nullptr,
+  std::array<VkDescriptorSetLayoutBinding, 2> layoutBindings = {
+      VkDescriptorSetLayoutBinding{
+          .binding = 0,
+          .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+          .descriptorCount = 1,
+          .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+          .pImmutableSamplers = nullptr,
+      },
+      VkDescriptorSetLayoutBinding{
+          .binding = 1,
+          .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+          .descriptorCount = 1,
+          .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+          .pImmutableSamplers = nullptr,
+      },
   };
 
   VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = {
       .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
       .pNext = nullptr,
       .flags = 0,
-      .bindingCount = 1,
-      .pBindings = &layoutBinding,
+      .bindingCount = static_cast<uint32_t>(layoutBindings.size()),
+      .pBindings = layoutBindings.data(),
   };
 
   if (vkCreateDescriptorSetLayout(
@@ -319,9 +328,15 @@ void StandardMaterial::createDescriptorSetLayout() {
 }
 
 void StandardMaterial::createDescriptorPool() {
-  VkDescriptorPoolSize poolSize = {
-      .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-      .descriptorCount = 1,
+  std::array<VkDescriptorPoolSize, 2> poolSizes = {
+      VkDescriptorPoolSize{
+          .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+          .descriptorCount = 1,
+      },
+      VkDescriptorPoolSize{
+          .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+          .descriptorCount = 1,
+      },
   };
 
   VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = {
@@ -329,8 +344,8 @@ void StandardMaterial::createDescriptorPool() {
       .pNext = nullptr,
       .flags = 0,
       .maxSets = MAX_DESCRIPTOR_SETS,
-      .poolSizeCount = 1,
-      .pPoolSizes = &poolSize,
+      .poolSizeCount = static_cast<uint32_t>(poolSizes.size()),
+      .pPoolSizes = poolSizes.data(),
   };
 
   if (vkCreateDescriptorPool(

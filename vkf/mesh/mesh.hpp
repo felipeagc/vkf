@@ -1,7 +1,8 @@
 #pragma once
 
-#include "../buffer/index_buffer.hpp"
 #include "../buffer/vertex_buffer.hpp"
+#include "../buffer/index_buffer.hpp"
+#include "../buffer/uniform_buffer.hpp"
 #include "../material/standard_material.hpp"
 #include "../texture/texture.hpp"
 #include "vertex.hpp"
@@ -10,6 +11,13 @@
 
 namespace vkf {
 class Framework;
+
+struct UniformBufferObject {
+  glm::mat4 model;
+  glm::mat4 view;
+  glm::mat4 proj;
+};
+
 class Mesh {
 public:
   Mesh(
@@ -18,6 +26,9 @@ public:
       std::vector<uint32_t> indices,
       const char *texturePath);
   ~Mesh();
+
+  void updateTextureDescriptor();
+  void updateUniformDescriptor(UniformBufferObject ubo);
 
   void draw(VkCommandBuffer commandBuffer);
 
@@ -32,6 +43,8 @@ protected:
 
   std::vector<uint32_t> indices;
   IndexBuffer indexBuffer;
+
+  UniformBuffer uniformBuffer;
 
   Texture texture;
 };

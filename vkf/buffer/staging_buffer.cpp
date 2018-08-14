@@ -62,6 +62,14 @@ void StagingBuffer::transfer(IndexBuffer &buffer, size_t size) {
       VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
 }
 
+void StagingBuffer::transfer(UniformBuffer &buffer, size_t size) {
+  this->innerBufferTransfer(
+      buffer,
+      size,
+      VK_ACCESS_UNIFORM_READ_BIT,
+      VK_PIPELINE_STAGE_VERTEX_SHADER_BIT);
+}
+
 void StagingBuffer::transfer(Texture &texture) {
   this->framework->getContext()->useTransientCommandBuffer(
       [&](VkCommandBuffer commandBuffer) {

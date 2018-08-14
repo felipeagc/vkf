@@ -418,6 +418,12 @@ VkSurfaceTransformFlagBitsKHR VkContext::getSwapchainTransform(
 VkPresentModeKHR VkContext::getSwapchainPresentMode(
     const std::vector<VkPresentModeKHR> &presentModes) {
   for (const auto &presentMode : presentModes) {
+    if (presentMode == VK_PRESENT_MODE_IMMEDIATE_KHR) {
+      return presentMode;
+    }
+  }
+
+  for (const auto &presentMode : presentModes) {
     if (presentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
       return presentMode;
     }

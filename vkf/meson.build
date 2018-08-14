@@ -11,11 +11,14 @@ vkf_sources = [
   'buffer/staging_buffer.cpp',
   'buffer/vertex_buffer.cpp',
   'buffer/index_buffer.cpp',
+  'buffer/uniform_buffer.cpp',
 
   'texture/texture.cpp',
 
   'material/material.cpp',
   'material/standard_material.cpp',
+
+  'camera/camera.cpp',
 
   'mesh/mesh.cpp',
 ]

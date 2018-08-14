@@ -21,6 +21,12 @@ public:
   uint32_t getWidth() const;
   uint32_t getHeight() const;
 
+  void setRelativeMouse(bool relative);
+  bool getRelativeMouse();
+  void getRelativeMousePos(int *x, int *y);
+
+  double getDelta();
+
   bool getShouldClose() const;
   void pollEvents();
 
@@ -34,6 +40,9 @@ private:
   SDL_Window *window;
 
   bool shouldClose = false;
+
+  int previousTime;
+  int deltaTime;
 
   std::list<EventListener *> eventListeners;
 };

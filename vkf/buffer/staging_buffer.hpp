@@ -1,9 +1,10 @@
 #pragma once
 
+#include "../texture/texture.hpp"
 #include "buffer.hpp"
 #include "index_buffer.hpp"
+#include "uniform_buffer.hpp"
 #include "vertex_buffer.hpp"
-#include "../texture/texture.hpp"
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan.h>
 
@@ -23,6 +24,9 @@ public:
 
   // Issues a command to transfer this buffer's memory into an index buffer
   void transfer(IndexBuffer &buffer, size_t size);
+
+  // Issues a command to transfer this buffer's memory into a uniform buffer
+  void transfer(UniformBuffer &buffer, size_t size);
 
   // Issues a command to transfer this buffer's memory into a texture's image
   void transfer(Texture &texture);
