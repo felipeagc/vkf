@@ -1,4 +1,5 @@
 #include "window.hpp"
+#include "event_handler.hpp"
 
 using namespace vkf;
 
@@ -43,6 +44,11 @@ void Window::getRelativeMousePos(int *x, int *y) {
   SDL_GetRelativeMouseState(x, y);
 }
 
+bool Window::isKeyPressed(Scancode scancode) {
+  const Uint8 *state = SDL_GetKeyboardState(NULL);
+  return state[scancode] ? true : false;
+}
+
 double Window::getDelta() {
   return static_cast<double>(this->deltaTime) / 1000.0f;
 }
@@ -58,11 +64,41 @@ void Window::pollEvents() {
     case SDL_QUIT:
       this->shouldClose = true;
       break;
+    case SDL_KEYUP:
+      for (EventHandler *handler : this->eventHandlers) {
+        handler->onKeyUp(
+            static_cast<Keycode>(event.key.keysym.sym),
+            static_cast<bool>(event.key.repeat));
+      }
+      break;
+    case SDL_KEYDOWN:
+      for (EventHandler *handler : this->eventHandlers) {
+        handler->onKeyDown(
+            static_cast<Keycode>(event.key.keysym.sym),
+            static_cast<bool>(event.key.repeat));
+      }
+      break;
+    case SDL_MOUSEBUTTONUP:
+      for (EventHandler *handler : this->eventHandlers) {
+        handler->onButtonUp(
+            static_cast<MouseButton>(event.button.button),
+            event.button.x,
+            event.button.y);
+      }
+      break;
+    case SDL_MOUSEBUTTONDOWN:
+      for (EventHandler *handler : this->eventHandlers) {
+        handler->onButtonDown(
+            static_cast<MouseButton>(event.button.button),
+            event.button.x,
+            event.button.y);
+      }
+      break;
     case SDL_WINDOWEVENT:
       switch (event.window.type) {
       case SDL_WINDOWEVENT_RESIZED:
-        for (EventListener *listener : eventListeners) {
-          listener->onResize(
+        for (EventHandler *handler : this->eventHandlers) {
+          handler->onResize(
               static_cast<uint32_t>(event.window.data1),
               static_cast<uint32_t>(event.window.data2));
         }
@@ -94,11 +130,11 @@ void Window::createVulkanSurface(VkInstance instance, VkSurfaceKHR *surface) {
   }
 }
 
-void Window::addListener(EventListener *eventListener) {
-  eventListener->window = this;
-  this->eventListeners.push_back(eventListener);
+void Window::addHandler(EventHandler *eventHandler) {
+  eventHandler->window = this;
+  this->eventHandlers.push_back(eventHandler);
 }
 
-void Window::removeListener(EventListener *eventListener) {
-  this->eventListeners.remove(eventListener);
+void Window::removeHandler(EventHandler *eventHandler) {
+  this->eventHandlers.remove(eventHandler);
 }

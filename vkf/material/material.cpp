@@ -10,7 +10,7 @@ Material::Material(
     : framework(framework),
       vertexShaderModule(vertexShaderModule),
       fragmentShaderModule(fragmentShaderModule) {
-  this->framework->getWindow()->addListener(this);
+  this->framework->getWindow()->addHandler(this);
 }
 
 void Material::bindPipeline(VkCommandBuffer commandBuffer) {

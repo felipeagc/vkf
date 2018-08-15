@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../window/window.hpp"
+#include "../window/event_handler.hpp"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>
 #include <functional>
@@ -27,7 +28,7 @@ const int MAX_FRAMES_IN_FLIGHT = 2;
 
 typedef std::function<void(VkCommandBuffer commandBuffer)> DrawFunction;
 
-class VkContext : public EventListener {
+class VkContext : public EventHandler {
 public:
   VkContext(Window *window);
   VkContext(const VkContext &) = delete;

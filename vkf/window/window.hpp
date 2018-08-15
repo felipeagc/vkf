@@ -1,5 +1,8 @@
 #pragma once
 
+#include "keycode.hpp"
+#include "mousebutton.hpp"
+#include "scancode.hpp"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>
 #include <functional>
@@ -7,7 +10,7 @@
 #include <vector>
 
 namespace vkf {
-class EventListener;
+class EventHandler;
 
 class Window {
   typedef std::function<void(uint32_t width, uint32_t height)> OnResizeCallback;
@@ -25,6 +28,8 @@ public:
   bool getRelativeMouse();
   void getRelativeMousePos(int *x, int *y);
 
+  bool isKeyPressed(Scancode scancode);
+
   double getDelta();
 
   bool getShouldClose() const;
@@ -33,8 +38,8 @@ public:
   std::vector<const char *> getVulkanExtensions();
   void createVulkanSurface(VkInstance instance, VkSurfaceKHR *surface);
 
-  void addListener(EventListener *eventListener);
-  void removeListener(EventListener *eventListener);
+  void addHandler(EventHandler *eventHandler);
+  void removeHandler(EventHandler *eventHandler);
 
 private:
   SDL_Window *window;
@@ -44,23 +49,6 @@ private:
   int previousTime;
   int deltaTime;
 
-  std::list<EventListener *> eventListeners;
+  std::list<EventHandler *> eventHandlers;
 };
-
-class EventListener {
-  friend class Window;
-
-public:
-  virtual ~EventListener() {
-    if (this->window != nullptr) {
-      this->window->removeListener(this);
-    }
-  };
-
-  virtual void onResize(uint32_t width, uint32_t height){};
-
-protected:
-  class Window *window{nullptr};
-};
-
 } // namespace vkf

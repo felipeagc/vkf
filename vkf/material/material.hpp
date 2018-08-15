@@ -2,6 +2,7 @@
 
 #include "../mesh/vertex.hpp"
 #include "../window/window.hpp"
+#include "../window/event_handler.hpp"
 #include <array>
 
 namespace vkf {
@@ -9,7 +10,7 @@ const uint32_t MAX_DESCRIPTOR_SETS = 4096;
 
 class Framework;
 
-class Material : public EventListener {
+class Material : public EventHandler {
   friend class Mesh;
 
 public:

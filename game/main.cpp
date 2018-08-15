@@ -2,10 +2,30 @@
 #include <iostream>
 #include <vkf.hpp>
 
+class App : public vkf::EventHandler {
+public:
+  App(){};
+  virtual ~App() {
+  }
+
+  void onKeyDown(vkf::Keycode key, bool repeat) override {
+    switch (key) {
+    case vkf::Keycode::KEY_ESCAPE:
+      this->window->setRelativeMouse(!this->window->getRelativeMouse());
+      break;
+    default:
+      break;
+    }
+  }
+};
+
 int main() {
   vkf::Framework framework("vkf", 800, 600);
   auto window = framework.getWindow();
   auto context = framework.getContext();
+
+  App app;
+  window->addHandler(&app);
 
   vkf::StandardMaterial material{&framework};
 

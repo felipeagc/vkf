@@ -42,7 +42,7 @@ VkContext::VkContext(Window *window) : window(window) {
 
   this->createRenderPass();
 
-  this->window->addListener(this);
+  this->window->addHandler(this);
 }
 
 VkContext::~VkContext() {
